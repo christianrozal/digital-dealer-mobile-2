@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import cors from 'cors';
 import authRoutes from './routes/auth.routes';
 import { authMiddleware } from './middleware/auth.middleware';
+import customerScanRoutes from './routes/customer-scan.routes';
 
 interface AuthenticatedRequest extends Request {
   user?: {
@@ -27,6 +28,7 @@ app.use(express.json());
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/customer-scans', customerScanRoutes);
 
 // Get current user
 app.get('/api/users/me', authMiddleware as any, async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
@@ -114,3 +116,5 @@ app.get('/api/dealership-brands/:brandId/departments', async (req: Request, res:
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
+
+export default app;

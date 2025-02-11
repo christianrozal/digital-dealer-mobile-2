@@ -13,6 +13,23 @@ interface Option {
   label: string;
 }
 
+// Updated interfaces to match Prisma schema
+interface Dealership {
+  id: number;
+  name: string;
+  slug: string;
+  website?: string;
+  facebook?: string;
+  instagram?: string;
+  linkedin?: string;
+  youtube?: string;
+  primary_contact_name?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  brands: DealershipBrand[];
+}
+
 interface DealershipBrand {
   id: number;
   name: string;
@@ -22,10 +39,8 @@ interface DealershipBrand {
   phone?: string;
   email?: string;
   address?: string;
-  dealership?: {
-    id: number;
-    name: string;
-  };
+  dealership: Dealership;
+  departments: DealershipDepartment[];
 }
 
 interface DealershipDepartment {
@@ -37,6 +52,7 @@ interface DealershipDepartment {
   phone?: string;
   email?: string;
   address?: string;
+  dealershipBrand: DealershipBrand;
 }
 
 interface UserData {
@@ -105,7 +121,7 @@ const DealershipsScreen = () => {
     fetchDealershipInfo();
   }, []);
 
-  // Fetch dealership brands
+  // Updated fetch dealership brands with new schema relations
   useEffect(() => {
     const fetchDealershipBrands = async () => {
       try {
@@ -142,9 +158,10 @@ const DealershipsScreen = () => {
           return;
         }
 
+        // Store the full brand data for later use
         const brandOptions = data.map(brand => ({
           id: brand.id.toString(),
-          label: brand.name
+          label: `${brand.name} - ${brand.dealership.name}`, // Now we can show both brand and dealership name
         }));
 
         setBrands(brandOptions);
@@ -159,7 +176,7 @@ const DealershipsScreen = () => {
     fetchDealershipBrands();
   }, []);
 
-  // Fetch departments when a brand is selected
+  // Updated fetch departments with new schema relations
   useEffect(() => {
     const fetchDepartments = async () => {
       if (!selectedBrand) return;
@@ -187,7 +204,7 @@ const DealershipsScreen = () => {
         const data: DealershipDepartment[] = await response.json();
         const departmentOptions = data.map(dept => ({
           id: dept.id.toString(),
-          label: dept.name
+          label: `${dept.name} - ${dept.dealershipBrand.name}`, // Now we can show both department and brand name
         }));
 
         setDepartments(departmentOptions);
@@ -247,7 +264,7 @@ const DealershipsScreen = () => {
           <Text className="mt-10 font-light text-sm">Welcome to</Text>
           <Text className="text-xl font-semibold mt-3">{dealershipName || 'Loading...'}</Text>
 
-          <View className="w-full min-h-44" style={{ marginTop: 40 }}>
+          <View className="w-full min-h-44 z-20" style={{ marginTop: 40 }}>
             <Select
               placeholder="Select Brand"
               value={selectedBrand}
@@ -258,7 +275,7 @@ const DealershipsScreen = () => {
             />
 
             {selectedBrand && departments.length > 0 && (
-              <View className="mt-4">
+              <View className="mt-4 z-10">
                 <Select
                   placeholder="Select Department"
                   value={selectedDepartment}
@@ -289,17 +306,7 @@ const DealershipsScreen = () => {
 
       {isLoading && (
         <View
-          style={{
-            position: "absolute",
-            zIndex: 1000,
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(255,255,255,0.5)",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
+          className="z-50 absolute top-0 left-0 right-0 bottom-0 justify-center items-center bg-white/50"
         >
           <ActivityIndicator size="large" color="#0000ff" />
         </View>

@@ -24,6 +24,19 @@ interface UserDealershipAccess {
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
+type DealershipBrandWithRelations = Prisma.DealershipBrandGetPayload<{
+  include: {
+    dealership: true;
+    departments: true;
+  };
+}>;
+
+type DealershipDepartmentWithRelations = Prisma.DealershipDepartmentGetPayload<{
+  include: {
+    dealershipBrand: true;
+  };
+}>;
+
 export const register = async (req: Request, res: Response) => {
   try {
     const { name, email, password, phone } = req.body;
@@ -177,72 +190,34 @@ export const getUserDealerships = async (req: AuthenticatedRequest, res: Respons
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    // First, get the user's role to check if they're an admin
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { role_id: true }
     });
 
-    // If user is an admin (role_id 1), get all dealership brands
+    const findManyArgs = {
+      include: {
+        dealership: true,
+        departments: true
+      },
+      orderBy: { name: 'asc' }
+    } satisfies Parameters<typeof prisma.dealershipBrand.findMany>[0];
+
     if (user?.role_id === 1) {
-      const allBrands = await prisma.dealershipBrand.findMany({
-        orderBy: { name: 'asc' }
-      });
-      
-      // Get dealership info separately
-      const dealerships = await prisma.dealership.findMany({
-        where: {
-          id: {
-            in: allBrands.map(brand => brand.dealership_id)
-          }
-        },
-        select: {
-          id: true,
-          name: true
-        }
-      });
-
-      // Combine the data
-      const brandsWithDealerships = allBrands.map(brand => ({
-        ...brand,
-        dealership: dealerships.find(d => d.id === brand.dealership_id)
-      }));
-
-      return res.json(brandsWithDealerships);
+      const allBrands = await prisma.dealershipBrand.findMany(findManyArgs);
+      return res.json(allBrands);
     }
 
-    // For non-admin users, get all brands (temporary)
-    const dealershipBrands = await prisma.dealershipBrand.findMany({
-      orderBy: { name: 'asc' }
-    });
+    const dealershipBrands = await prisma.dealershipBrand.findMany(findManyArgs);
 
-    // Get dealership info separately
-    const dealerships = await prisma.dealership.findMany({
-      where: {
-        id: {
-          in: dealershipBrands.map(brand => brand.dealership_id)
-        }
-      },
-      select: {
-        id: true,
-        name: true
-      }
-    });
-
-    // Combine the data
-    const brandsWithDealerships = dealershipBrands.map(brand => ({
-      ...brand,
-      dealership: dealerships.find(d => d.id === brand.dealership_id)
-    }));
-
-    if (!brandsWithDealerships || brandsWithDealerships.length === 0) {
+    if (!dealershipBrands || dealershipBrands.length === 0) {
       return res.status(404).json({ 
         message: 'No dealership brands found',
-        details: 'The dealership brands table is empty'
+        details: 'No dealership brands are accessible to this user'
       });
     }
 
-    return res.json(brandsWithDealerships);
+    return res.json(dealershipBrands);
   } catch (error: any) {
     console.error('Error fetching dealerships:', error);
     res.status(500).json({ 
@@ -254,27 +229,46 @@ export const getUserDealerships = async (req: AuthenticatedRequest, res: Respons
 
 export const getDealershipDepartments = async (req: AuthenticatedRequest, res: Response) => {
   try {
+    const userId = req.user?.id;
     const brandId = parseInt(req.params.brandId);
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
 
     if (!brandId || isNaN(brandId)) {
       return res.status(400).json({ message: 'Invalid brand ID' });
     }
 
-    // TEMPORARY: For testing, get all departments for the brand without access check
-    console.log('🔍 TESTING MODE: Fetching departments for brand:', brandId);
-    const departments = await prisma.dealershipDepartment.findMany({
+    const findManyArgs = {
       where: {
         dealership_brand_id: brandId
       },
-      orderBy: {
-        name: 'asc'
-      }
-    });
+      include: {
+        dealershipBrand: {
+          include: {
+            dealership: true
+          }
+        }
+      },
+      orderBy: { name: 'asc' }
+    } satisfies Parameters<typeof prisma.dealershipDepartment.findMany>[0];
 
-    console.log('📦 Departments found:', departments);
-    res.json(departments);
-  } catch (error) {
+    const departments = await prisma.dealershipDepartment.findMany(findManyArgs);
+
+    if (!departments || departments.length === 0) {
+      return res.status(404).json({
+        message: 'No departments found',
+        details: `No departments found for brand ID ${brandId}`
+      });
+    }
+
+    return res.json(departments);
+  } catch (error: any) {
     console.error('Error fetching departments:', error);
-    res.status(500).json({ message: 'Error fetching departments' });
+    res.status(500).json({
+      message: 'Error fetching departments',
+      details: error?.message || 'Unknown error'
+    });
   }
 }; 

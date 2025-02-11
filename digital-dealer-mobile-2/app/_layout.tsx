@@ -5,6 +5,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { Platform } from 'react-native';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 
@@ -29,13 +30,27 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: 'white' },
-      }}>
+      <Stack 
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: 'white' },
+          animation: 'slide_from_right',
+          animationDuration: 200,
+        }}
+      >
         <Stack.Screen name="index" />
         <Stack.Screen name="login/index" />
         <Stack.Screen name="dealerships/index" />
+        <Stack.Screen name="home/index" />
+        <Stack.Screen 
+          name="qr-scanner/index"
+          options={{
+            presentation: 'modal',
+            animation: 'slide_from_bottom',
+            animationDuration: 300,
+            contentStyle: { backgroundColor: 'transparent' },
+          }}
+        />
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="auto" />

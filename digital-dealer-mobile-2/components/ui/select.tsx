@@ -57,7 +57,7 @@
               {value?.label || placeholder}
             </Text>
             <View
-              className="transition-transform duration-300"
+              className="transition-transform duration-300 "
               style={{
                 transform: [{ rotate: isOpen ? "180deg" : "0deg" }],
               }}
@@ -68,7 +68,7 @@
 
           {isOpen && options.length > 0 && (
             <View 
-              className="mt-1 bg-white border border-gray-200 rounded-md absolute w-full"
+              className="mt-1 bg-white border border-gray-200 rounded-md absolute w-full z-50"
               style={{
                 top: "100%",
                 maxHeight,

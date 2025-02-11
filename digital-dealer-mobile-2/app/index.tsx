@@ -25,7 +25,7 @@ const FirstPage = () => {
       <Text className="text-xl font-bold text-black">FirstPage</Text>
       {/* Continue to Home */}
       <TouchableOpacity
-        onPress={() => router.push('/home/index')}
+        onPress={() => router.push('/home')}
         className="bg-color1 rounded-full px-4 py-2.5 w-full mt-20"
       >
         <Text className="text-white text-center font-medium text-base">Continue to Home</Text>
