@@ -1,10 +1,11 @@
 import { View, Text, ScrollView, RefreshControl, ActivityIndicator } from 'react-native'
 import React, { useEffect, useState } from 'react'
-import { useAuth } from '../../context/AuthContext'
 import axios from 'axios'
 import { format } from 'date-fns'
 import { Card } from '@/components/ui/card'
 import { API_URL } from '@/constants'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import { router } from 'expo-router'
 
 interface CustomerScan {
   id: number
@@ -23,18 +24,74 @@ interface CustomerScan {
   created_at: string
 }
 
+interface DealershipSelection {
+  brand: {
+    id: string
+    name: string
+  }
+  department: {
+    id: string
+    name: string
+  } | null
+}
+
+interface UserData {
+  id: number;
+  email: string;
+  role_id: number;
+}
+
 const HomeScreen = () => {
-  const { user } = useAuth()
   const [scans, setScans] = useState<CustomerScan[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [selectedDealership, setSelectedDealership] = useState<DealershipSelection | null>(null)
+  const [userData, setUserData] = useState<UserData | null>(null)
 
   const fetchScans = async () => {
     try {
-      const response = await axios.get(`${API_URL}/customer-scans/user/${user?.id}`)
+      setLoading(true)
+      
+      // Get user data from AsyncStorage
+      const userDataStr = await AsyncStorage.getItem('userData')
+      if (!userDataStr) {
+        router.replace('/login')
+        return
+      }
+      const user: UserData = JSON.parse(userDataStr)
+      setUserData(user)
+
+      // Get selected dealership
+      const selection = await AsyncStorage.getItem('selectedDealership')
+      const dealershipSelection: DealershipSelection = selection ? JSON.parse(selection) : null
+      setSelectedDealership(dealershipSelection)
+
+      if (!dealershipSelection) {
+        throw new Error('No dealership selected')
+      }
+
+      // Get auth token
+      const token = await AsyncStorage.getItem('userToken')
+      if (!token) {
+        router.replace('/login')
+        return
+      }
+
+      // Fetch scans for the selected brand/department
+      const response = await axios.get(`${API_URL}/customer-scans/user/${user.id}`, {
+        params: {
+          brandId: dealershipSelection.brand.id,
+          departmentId: dealershipSelection.department?.id
+        },
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
       setScans(response.data)
     } catch (error) {
       console.error('Error fetching scans:', error)
+      setScans([])
     } finally {
       setLoading(false)
       setRefreshing(false)
@@ -66,10 +123,15 @@ const HomeScreen = () => {
       }
     >
       <Text className="text-2xl font-bold mt-4 mb-2">Your Recent Scans</Text>
+      <Text className="text-gray-600 mb-4">
+        {selectedDealership?.department 
+          ? `${selectedDealership.department.name}`
+          : selectedDealership?.brand.name}
+      </Text>
       {scans.length === 0 ? (
         <Text className="text-gray-500 text-center mt-4">No scans found</Text>
       ) : (
-        scans.map((scan) => (
+        scans.map(scan => (
           <Card key={scan.id} className="mb-4 p-4">
             <View className="flex-row justify-between items-start">
               <View className="flex-1">

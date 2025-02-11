@@ -8,7 +8,7 @@ datasource db {
 }
 
 model Dealership {
-  id                   Int       @id @default(autoincrement())
+  id                   Int               @id @default(autoincrement())
   name                 String
   slug                 String
   website              String?
@@ -20,21 +20,19 @@ model Dealership {
   phone                String?
   email                String?
   address              String?
-  created_at           DateTime  @default(now())
-  updated_at           DateTime  @updatedAt
-  
-  // Relations
-  brands              DealershipBrand[]
-  qrCodes            QrCode[]
-  dealershipScans    DealershipScan[]
-  customerScans      CustomerScan[]
-  appointments       Appointment[]
+  created_at           DateTime          @default(now())
+  updated_at           DateTime          @updatedAt
+  appointments         Appointment[]
+  customerScans        CustomerScan[]
+  dealershipScans      DealershipScan[]
+  qrCodes              QrCode[]
+  brands               DealershipBrand[]
 
   @@map("dealerships")
 }
 
 model DealershipBrand {
-  id                   Int       @id @default(autoincrement())
+  id                   Int                    @id @default(autoincrement())
   name                 String
   slug                 String
   dealership_id        Int
@@ -42,20 +40,18 @@ model DealershipBrand {
   phone                String?
   email                String?
   address              String?
-  created_at           DateTime  @default(now())
-  updated_at           DateTime  @updatedAt
-
-  // Relations
-  dealership          Dealership @relation(fields: [dealership_id], references: [id], onDelete: Cascade)
-  departments         DealershipDepartment[]
-  qrCodes            QrCode[]
-  customerScans      CustomerScan[]
+  created_at           DateTime               @default(now())
+  updated_at           DateTime               @updatedAt
+  customerScans        CustomerScan[]
+  qrCodes              QrCode[]
+  dealership           Dealership             @relation(fields: [dealership_id], references: [id], onDelete: Cascade)
+  departments          DealershipDepartment[]
 
   @@map("dealership_brands")
 }
 
 model DealershipDepartment {
-  id                   Int       @id @default(autoincrement())
+  id                   Int             @id @default(autoincrement())
   name                 String
   slug                 String
   dealership_brand_id  Int
@@ -63,142 +59,124 @@ model DealershipDepartment {
   phone                String?
   email                String?
   address              String?
-  created_at           DateTime  @default(now())
-  updated_at           DateTime  @updatedAt
-
-  // Relations
-  dealershipBrand     DealershipBrand @relation(fields: [dealership_brand_id], references: [id], onDelete: Cascade)
-  qrCodes            QrCode[]
-  customerScans      CustomerScan[]
+  created_at           DateTime        @default(now())
+  updated_at           DateTime        @updatedAt
+  customerScans        CustomerScan[]
+  qrCodes              QrCode[]
+  dealershipBrand      DealershipBrand @relation(fields: [dealership_brand_id], references: [id], onDelete: Cascade)
 
   @@map("dealership_departments")
 }
 
 model EntityType {
-  id            Int       @id @default(autoincrement())
+  id            Int                    @id @default(autoincrement())
   entity_name   String
   entity_id     Int
-  created_at    DateTime  @default(now())
-  updated_at    DateTime  @updatedAt
-
-  // Relations
-  userAccess    UserDealershipAccess[]
+  created_at    DateTime               @default(now())
+  updated_at    DateTime               @updatedAt
   notifications Notification[]
+  userAccess    UserDealershipAccess[]
 }
 
 model Role {
-  id         Int       @id @default(autoincrement())
+  id         Int      @id @default(autoincrement())
   name       String
-  created_at DateTime  @default(now())
-  updated_at DateTime  @updatedAt
-
-  // Relations
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
   users      User[]
 }
 
 model User {
-  id                Int       @id @default(autoincrement())
+  id                Int                    @id @default(autoincrement())
+  email             String                 @unique
   name              String
-  email             String    @unique
+  created_at        DateTime               @default(now())
+  phone             String?
+  profile_image_url String?
+  role_id           Int
+  slug              String?
+  updated_at        DateTime               @updatedAt
   passwordHash      String
   resetToken        String?
   resetTokenExpires DateTime?
-  phone             String?
-  slug              String?
-  profile_image_url String?
-  role_id           Int
-  created_at        DateTime  @default(now())
-  updated_at        DateTime  @updatedAt
-
-  // Relations
-  role              Role @relation(fields: [role_id], references: [id])
-  dealershipAccess  UserDealershipAccess[]
-  customerScans     CustomerScan[]
-  comments          Comment[]
-  notifications     Notification[]
   appointments      Appointment[]
+  comments          Comment[]
+  customerScans     CustomerScan[]
+  notifications     Notification[]
+  role              Role                   @relation(fields: [role_id], references: [id])
+  dealershipAccess  UserDealershipAccess[]
 }
 
 model UserDealershipAccess {
-  user_id     Int
-  entity_id   Int
-  created_at  DateTime  @default(now())
-  updated_at  DateTime  @updatedAt
-
-  // Relations
-  user        User @relation(fields: [user_id], references: [id])
-  entity      EntityType @relation(fields: [entity_id], references: [id])
+  user_id    Int
+  entity_id  Int
+  created_at DateTime   @default(now())
+  updated_at DateTime   @updatedAt
+  entity     EntityType @relation(fields: [entity_id], references: [id])
+  user       User       @relation(fields: [user_id], references: [id])
 
   @@id([user_id, entity_id])
 }
 
 model Customer {
-  id                Int       @id @default(autoincrement())
+  id                Int              @id @default(autoincrement())
   name              String
   email             String?
   phone             String?
   slug              String?
   profile_image_url String?
-  created_at        DateTime  @default(now())
-  updated_at        DateTime  @updatedAt
-
-  // Relations
-  dealershipScans   DealershipScan[]
-  customerScans     CustomerScan[]
-  customerLogs      CustomerLog[]
+  created_at        DateTime         @default(now())
+  updated_at        DateTime         @updatedAt
   appointments      Appointment[]
+  customerLogs      CustomerLog[]
+  customerScans     CustomerScan[]
+  dealershipScans   DealershipScan[]
 }
 
 model QrCode {
-  id                       Int       @id @default(autoincrement())
+  id                       Int                  @id @default(autoincrement())
   qr_code                  String
   dealership_id            Int
   dealership_brand_id      Int
   dealership_department_id Int
-  created_at               DateTime  @default(now())
-  updated_at              DateTime  @updatedAt
-
-  // Relations
-  dealership            Dealership @relation(fields: [dealership_id], references: [id])
-  dealershipBrand      DealershipBrand @relation(fields: [dealership_brand_id], references: [id])
-  dealershipDepartment DealershipDepartment @relation(fields: [dealership_department_id], references: [id])
-  dealershipScans      DealershipScan[]
+  created_at               DateTime             @default(now())
+  updated_at               DateTime             @updatedAt
+  dealershipScans          DealershipScan[]
+  dealershipBrand          DealershipBrand      @relation(fields: [dealership_brand_id], references: [id])
+  dealershipDepartment     DealershipDepartment @relation(fields: [dealership_department_id], references: [id])
+  dealership               Dealership           @relation(fields: [dealership_id], references: [id])
 }
 
 model DealershipScan {
-  id           Int       @id @default(autoincrement())
-  qrcode_id    Int
-  customer_id  Int
-  created_at   DateTime  @default(now())
-  submitted_at DateTime?
-  updated_at   DateTime  @updatedAt
-
-  // Relations
-  qrCode      QrCode @relation(fields: [qrcode_id], references: [id])
-  customer    Customer @relation(fields: [customer_id], references: [id])
-  dealership  Dealership @relation(fields: [dealership_id], references: [id])
+  id            Int        @id @default(autoincrement())
+  qrcode_id     Int
+  customer_id   Int
+  created_at    DateTime   @default(now())
+  submitted_at  DateTime?
+  updated_at    DateTime   @updatedAt
   dealership_id Int
+  customer      Customer   @relation(fields: [customer_id], references: [id])
+  dealership    Dealership @relation(fields: [dealership_id], references: [id])
+  qrCode        QrCode     @relation(fields: [qrcode_id], references: [id])
 }
 
 model CustomerScan {
-  id                      Int       @id @default(autoincrement())
-  customer_id            Int
-  user_id               Int
-  dealership_id         Int
-  dealership_brand_id   Int
+  id                       Int                   @id @default(autoincrement())
+  customer_id              Int
+  user_id                  Int
+  dealership_id            Int
+  dealership_brand_id      Int
   dealership_department_id Int?
-  interest_status       String
-  interested_in         String?
-  follow_up_date       DateTime?
-  created_at           DateTime  @default(now())
-  updated_at           DateTime  @updatedAt
-
-  // Relations
-  customer              Customer @relation(fields: [customer_id], references: [id])
-  user                 User @relation(fields: [user_id], references: [id])
-  dealership           Dealership @relation(fields: [dealership_id], references: [id])
-  dealershipBrand     DealershipBrand @relation(fields: [dealership_brand_id], references: [id])
-  dealershipDepartment DealershipDepartment? @relation(fields: [dealership_department_id], references: [id])
+  interest_status          String
+  interested_in            String?
+  follow_up_date           DateTime?
+  created_at               DateTime              @default(now())
+  updated_at               DateTime              @updatedAt
+  customer                 Customer              @relation(fields: [customer_id], references: [id])
+  dealershipBrand          DealershipBrand       @relation(fields: [dealership_brand_id], references: [id])
+  dealershipDepartment     DealershipDepartment? @relation(fields: [dealership_department_id], references: [id])
+  dealership               Dealership            @relation(fields: [dealership_id], references: [id])
+  user                     User                  @relation(fields: [user_id], references: [id])
 }
 
 model CustomerLog {
@@ -208,51 +186,43 @@ model CustomerLog {
   prioruser_ids  Int[]
   created_at     DateTime  @default(now())
   updated_at     DateTime  @updatedAt
-
-  // Relations
-  customer       Customer @relation(fields: [customer_id], references: [id])
   comments       Comment[]
+  customer       Customer  @relation(fields: [customer_id], references: [id])
 }
 
 model Comment {
-  id             Int       @id @default(autoincrement())
+  id             Int         @id @default(autoincrement())
   comment_text   String
   customerlog_id Int
   user_id        Int
-  created_at     DateTime  @default(now())
-  updated_at     DateTime  @updatedAt
-
-  // Relations
+  created_at     DateTime    @default(now())
+  updated_at     DateTime    @updatedAt
   customerLog    CustomerLog @relation(fields: [customerlog_id], references: [id])
-  user          User @relation(fields: [user_id], references: [id])
+  user           User        @relation(fields: [user_id], references: [id])
 }
 
 model Notification {
-  id          Int       @id @default(autoincrement())
-  type        String
-  read        Boolean   @default(false)
-  user_id     Int
-  entity_id   Int
-  created_at  DateTime  @default(now())
-  updated_at  DateTime  @updatedAt
-
-  // Relations
-  user        User @relation(fields: [user_id], references: [id])
-  entity      EntityType @relation(fields: [entity_id], references: [id])
+  id         Int        @id @default(autoincrement())
+  type       String
+  read       Boolean    @default(false)
+  user_id    Int
+  entity_id  Int
+  created_at DateTime   @default(now())
+  updated_at DateTime   @updatedAt
+  entity     EntityType @relation(fields: [entity_id], references: [id])
+  user       User       @relation(fields: [user_id], references: [id])
 }
 
 model Appointment {
-  id            Int       @id @default(autoincrement())
+  id            Int        @id @default(autoincrement())
   date          DateTime
   notes         String?
   user_id       Int
   customer_id   Int
   dealership_id Int
-  created_at    DateTime  @default(now())
-  updated_at    DateTime  @updatedAt
-
-  // Relations
-  user          User @relation(fields: [user_id], references: [id])
-  customer      Customer @relation(fields: [customer_id], references: [id])
+  created_at    DateTime   @default(now())
+  updated_at    DateTime   @updatedAt
+  customer      Customer   @relation(fields: [customer_id], references: [id])
   dealership    Dealership @relation(fields: [dealership_id], references: [id])
+  user          User       @relation(fields: [user_id], references: [id])
 }

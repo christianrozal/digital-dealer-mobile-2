@@ -4,30 +4,90 @@ import * as bcrypt from 'bcryptjs'
 const prisma = new PrismaClient()
 
 async function main() {
-  // Get existing Lennock Motor Group dealership
-  const dealership = await prisma.dealership.findFirst({
-    where: {
-      name: 'Lennock Motor Group'
+  // Create consultant and manager roles
+  const consultantRole = await prisma.role.create({
+    data: {
+      name: 'consultant'
     }
   });
+  console.log('Created consultant role:', consultantRole);
 
-  if (!dealership) {
-    throw new Error('Lennock Motor Group dealership not found');
-  }
+  const managerRole = await prisma.role.create({
+    data: {
+      name: 'manager'
+    }
+  });
+  console.log('Created manager role:', managerRole);
 
-  // Get existing Lennock Volkswagen brand
-  const brand = await prisma.dealershipBrand.findFirst({
-    where: {
+  // Create user Christian Rozal as consultant
+  const hashedPassword = await bcrypt.hash('password123', 10);
+  const user = await prisma.user.create({
+    data: {
+      name: 'Christian Rozal',
+      email: 'christian@alexium.com.au',
+      phone: '+639123456789',
+      passwordHash: hashedPassword,
+      role_id: consultantRole.id,
+      slug: 'christian-rozal'
+    }
+  });
+  console.log('Created user:', user);
+
+  // Create Lennock Motor Group dealership
+  const dealership = await prisma.dealership.create({
+    data: {
+      name: 'Lennock Motor Group',
+      slug: 'lennock-motor-group'
+    }
+  });
+  console.log('Created dealership:', dealership);
+
+  // Create dealership brands
+  const volkswagen = await prisma.dealershipBrand.create({
+    data: {
       name: 'Lennock Volkswagen',
+      slug: 'lennock-volkswagen',
       dealership_id: dealership.id
     }
   });
+  console.log('Created Volkswagen brand:', volkswagen);
 
-  if (!brand) {
-    throw new Error('Lennock Volkswagen brand not found');
-  }
+  const nissan = await prisma.dealershipBrand.create({
+    data: {
+      name: 'Lennock Nissan',
+      slug: 'lennock-nissan',
+      dealership_id: dealership.id
+    }
+  });
+  console.log('Created Nissan brand:', nissan);
 
+  const jlr = await prisma.dealershipBrand.create({
+    data: {
+      name: 'Lennock JLR',
+      slug: 'lennock-jlr',
+      dealership_id: dealership.id
+    }
+  });
+  console.log('Created JLR brand:', jlr);
 
+  // Create JLR departments
+  const jlrNew = await prisma.dealershipDepartment.create({
+    data: {
+      name: 'Lennock JLR New',
+      slug: 'lennock-jlr-new',
+      dealership_brand_id: jlr.id
+    }
+  });
+  console.log('Created JLR New department:', jlrNew);
+
+  const jlrUsed = await prisma.dealershipDepartment.create({
+    data: {
+      name: 'Lennock JLR Used',
+      slug: 'lennock-jlr-used',
+      dealership_brand_id: jlr.id
+    }
+  });
+  console.log('Created JLR Used department:', jlrUsed);
 
   // Create 10 random customers
   const customers = [
@@ -47,52 +107,35 @@ async function main() {
   const interestedInOptions = ['Buying', 'Selling', 'Financing'];
 
   for (const customerData of customers) {
-    try {
-      // Check if customer already exists by email
-      const existingCustomer = await prisma.customer.findFirst({
-        where: {
-          email: customerData.email
+    const customer = await prisma.customer.create({
+      data: {
+        name: customerData.name,
+        email: customerData.email,
+        phone: customerData.phone,
+        slug: customerData.name.toLowerCase().replace(/\s+/g, '-')
+      }
+    });
+    console.log('Created customer:', customer);
+
+    // Create two customer scans for each customer (all in Lennock Volkswagen)
+    for (let i = 0; i < 2; i++) {
+      const randomInterestStatus = interestStatuses[Math.floor(Math.random() * interestStatuses.length)];
+      const randomInterestedIn = interestedInOptions[Math.floor(Math.random() * interestedInOptions.length)];
+      const followUpDate = new Date();
+      followUpDate.setDate(followUpDate.getDate() + Math.floor(Math.random() * 14)); // Random date within next 14 days
+
+      const customerScan = await prisma.customerScan.create({
+        data: {
+          customer_id: customer.id,
+          user_id: user.id,
+          dealership_id: dealership.id,
+          dealership_brand_id: volkswagen.id,
+          interest_status: randomInterestStatus,
+          interested_in: randomInterestedIn,
+          follow_up_date: followUpDate
         }
       });
-
-      let customer;
-      if (existingCustomer) {
-        console.log(`Customer ${customerData.name} already exists with ID ${existingCustomer.id}`);
-        customer = existingCustomer;
-      } else {
-        customer = await prisma.customer.create({
-          data: {
-            name: customerData.name,
-            email: customerData.email,
-            phone: customerData.phone,
-            slug: customerData.name.toLowerCase().replace(/\s+/g, '-')
-          }
-        });
-        console.log('Created new customer:', customer);
-      }
-
-      // Create two customer scans for each customer
-      for (let i = 0; i < 2; i++) {
-        const randomInterestStatus = interestStatuses[Math.floor(Math.random() * interestStatuses.length)];
-        const randomInterestedIn = interestedInOptions[Math.floor(Math.random() * interestedInOptions.length)];
-        const followUpDate = new Date();
-        followUpDate.setDate(followUpDate.getDate() + Math.floor(Math.random() * 14)); // Random date within next 14 days
-
-        const customerScan = await prisma.customerScan.create({
-          data: {
-            customer_id: customer.id,
-            user_id: 1, // Using the existing user
-            dealership_id: dealership.id,
-            dealership_brand_id: brand.id,
-            interest_status: randomInterestStatus,
-            interested_in: randomInterestedIn,
-            follow_up_date: followUpDate
-          }
-        });
-        console.log(`Created customer scan ${i + 1} for customer:`, customerScan);
-      }
-    } catch (error) {
-      console.log(`Error processing customer ${customerData.name}:`, error);
+      console.log(`Created customer scan ${i + 1} for customer:`, customerScan);
     }
   }
 }

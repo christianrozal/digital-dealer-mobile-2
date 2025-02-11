@@ -161,7 +161,7 @@ const DealershipsScreen = () => {
         // Store the full brand data for later use
         const brandOptions = data.map(brand => ({
           id: brand.id.toString(),
-          label: `${brand.name} - ${brand.dealership.name}`, // Now we can show both brand and dealership name
+          label: brand.name,
         }));
 
         setBrands(brandOptions);
@@ -197,20 +197,29 @@ const DealershipsScreen = () => {
           }
         });
 
-        if (!response.ok) {
+        if (!response.ok && response.status !== 404) {
           throw new Error('Failed to fetch departments');
         }
 
         const data: DealershipDepartment[] = await response.json();
+        
+        // If there are no departments or we get a 404, just set an empty array
+        // This is a valid case for brands without departments
+        if (!data || response.status === 404) {
+          setDepartments([]);
+          return;
+        }
+
         const departmentOptions = data.map(dept => ({
           id: dept.id.toString(),
-          label: `${dept.name} - ${dept.dealershipBrand.name}`, // Now we can show both department and brand name
+          label: dept.name,
         }));
 
         setDepartments(departmentOptions);
       } catch (error) {
         console.error('Error:', error);
-        setError('Failed to load departments');
+        // Don't show error for missing departments, just set empty array
+        setDepartments([]);
       } finally {
         setIsLoading(false);
       }
@@ -240,9 +249,26 @@ const DealershipsScreen = () => {
     setDepartmentDropdownOpen(false);
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (selectedBrand && (departments.length === 0 || selectedDepartment)) {
-      router.push("/home");
+      try {
+        // Store selected brand and department
+        const selection = {
+          brand: {
+            id: selectedBrand.id,
+            name: selectedBrand.label
+          },
+          department: selectedDepartment ? {
+            id: selectedDepartment.id,
+            name: selectedDepartment.label
+          } : null
+        };
+        await AsyncStorage.setItem('selectedDealership', JSON.stringify(selection));
+        router.push("/home");
+      } catch (error) {
+        console.error('Error saving selection:', error);
+        setError('Failed to save selection');
+      }
     }
   };
 
@@ -291,7 +317,7 @@ const DealershipsScreen = () => {
             <View className="mt-8">
               <ButtonComponent
                 label="Continue"
-                onPress={() => router.push('/home')}
+                onPress={handleContinue}
                 disabled={!selectedBrand || (departments.length > 0 && !selectedDepartment)}
                 className={`${
                   selectedBrand && (departments.length === 0 || selectedDepartment)
