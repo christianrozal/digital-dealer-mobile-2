@@ -1,0 +1,162 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Dealership {
+  id                   Int       @id @default(autoincrement())
+  name                 String
+  slug                 String
+  website              String?
+  facebook             String?
+  instagram            String?
+  linkedin             String?
+  youtube              String?
+  primary_contact_name String?
+  phone                String?
+  email                String?
+  address              String?
+  created_at           DateTime  @default(now())
+  updated_at           DateTime  @updatedAt
+  brands              DealershipBrand[]
+}
+
+model DealershipBrand {
+  id                   Int       @id @default(autoincrement())
+  name                 String
+  slug                 String
+  dealership_id        Int       // Foreign key to Dealership
+  primary_contact_name String?
+  phone                String?
+  email                String?
+  address              String?
+  created_at           DateTime  @default(now())
+  updated_at           DateTime  @updatedAt
+  dealership           Dealership @relation(fields: [dealership_id], references: [id])
+}
+
+model DealershipDepartment {
+  id                   Int       @id @default(autoincrement())
+  name                 String
+  slug                 String
+  dealership_brand_id  Int       // Foreign key to DealershipBrand
+  primary_contact_name String?
+  phone                String?
+  email                String?
+  address              String?
+  created_at           DateTime  @default(now())
+  updated_at           DateTime  @updatedAt
+}
+
+model EntityType {
+  id            Int       @id @default(autoincrement())
+  entity_name   String
+  entity_id     Int
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+}
+
+model Role {
+  id         Int       @id @default(autoincrement())
+  name       String
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+}
+
+model User {
+  id                Int       @id @default(autoincrement())
+  name              String
+  email             String    @unique
+  passwordHash      String    // Stored hashed password
+  resetToken        String?   // For password reset functionality
+  resetTokenExpires DateTime?
+  phone             String?
+  slug              String?
+  profile_image_url String?
+  role_id           Int       // Foreign key to Role
+  created_at        DateTime  @default(now())
+  updated_at        DateTime  @updatedAt
+}
+
+model UserDealershipAccess {
+  user_id     Int
+  entity_id   Int       // Foreign key to EntityType
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+
+  @@id([user_id, entity_id])
+}
+
+model Customer {
+  id                Int       @id @default(autoincrement())
+  name              String
+  email             String?
+  phone             String?
+  slug              String?
+  profile_image_url String?
+  created_at        DateTime  @default(now())
+  updated_at        DateTime  @updatedAt
+}
+
+model QrCode {
+  id                       Int       @id @default(autoincrement())
+  qr_code                  String
+  dealership_id            Int       // Foreign key to Dealership
+  dealership_brand_id      Int       // Foreign key to DealershipBrand
+  dealership_department_id Int       // Foreign key to DealershipDepartment
+  user_id                  Int       // Foreign key to User
+  created_at               DateTime  @default(now())
+  updated_at              DateTime  @updatedAt
+}
+
+model Scan {
+  id           Int       @id @default(autoincrement())
+  qrcode_id    Int       // Foreign key to QrCode
+  customer_id  Int       // Foreign key to Customer
+  created_at   DateTime  @default(now())
+  submitted_at DateTime?
+  updated_at   DateTime  @updatedAt
+}
+
+model CustomerLog {
+  id             Int       @id @default(autoincrement())
+  customer_id    Int       // Foreign key to Customer
+  currentuser_id Int       // Foreign key to User
+  prioruser_ids  Int[]    // Array of User IDs
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+}
+
+model Comment {
+  id             Int       @id @default(autoincrement())
+  comment_text   String
+  customerlog_id Int       // Foreign key to CustomerLog
+  user_id        Int       // Foreign key to User
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+}
+
+model Notification {
+  id          Int       @id @default(autoincrement())
+  type        String
+  read        Boolean   @default(false)
+  user_id     Int       // Foreign key to User
+  entity_id   Int       // Foreign key to EntityType
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+}
+
+model Appointment {
+  id            Int       @id @default(autoincrement())
+  date          DateTime
+  notes         String?
+  user_id       Int       // Foreign key to User
+  customer_id   Int       // Foreign key to Customer
+  dealership_id Int       // Foreign key to Dealership
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+}
