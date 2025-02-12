@@ -3,9 +3,10 @@
   "license": "MIT",
   "scripts": {
     "dev": "nodemon --exec ts-node src/api.ts",
-    "build": "tsc",
+    "build": "prisma generate && tsc",
     "start": "node dist/api.js",
-    "postinstall": "prisma generate && npm run build",
+    "vercel-build": "prisma generate && tsc",
+    "postinstall": "prisma generate",
     "queries": "ts-node ./src/queries.ts",
     "caching": "ts-node ./src/caching.ts",
     "realtime": "ts-node ./src/realtime.ts"
