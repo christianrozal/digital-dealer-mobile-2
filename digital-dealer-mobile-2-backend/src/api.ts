@@ -4,6 +4,9 @@ import cors from 'cors';
 import authRoutes from './routes/auth.routes';
 import { authMiddleware } from './middleware/auth.middleware';
 import customerScanRoutes from './routes/customer-scan.routes';
+import customerRoutes from './routes/customer.routes';
+import commentRoutes from './routes/comment.routes';
+import customerLogRoutes from './routes/customer-log.routes';
 
 interface AuthenticatedRequest extends Request {
   user?: {
@@ -28,7 +31,10 @@ app.use(express.json());
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/customer-scans', customerScanRoutes);
+app.use('/api/customer-scans', customerScanRoutes);
+app.use('/api/customer', customerRoutes);
+app.use('/api/comments', commentRoutes);
+app.use('/api/customer-logs', customerLogRoutes);
 
 // Get current user
 app.get('/api/users/me', authMiddleware as any, async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {

@@ -1,11 +1,27 @@
-import { View, Text, ScrollView, RefreshControl, ActivityIndicator } from 'react-native'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  TextInput,
+  ScrollView,
+  RefreshControl,
+  Modal,
+  Alert,
+} from 'react-native'
 import axios from 'axios'
-import { format } from 'date-fns'
-import { Card } from '@/components/ui/card'
-import { API_URL } from '@/constants'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { router } from 'expo-router'
+import { format } from 'date-fns'
+
+// Import your icons (adjust paths as needed)
+import SearchIcon from '@/components/svg/searchIcon'
+import CloseIcon from '@/components/svg/closeIcon'
+import FilterIcon from '@/components/svg/filterIcon'
+import PhoneIcon from '@/components/svg/phoneIcon'
+import EmailIcon from '@/components/svg/emailIcon'
+import CalendarIcon from '@/components/svg/calendar'
+import { API_URL } from '@/constants'
 
 interface CustomerScan {
   id: number
@@ -36,22 +52,105 @@ interface DealershipSelection {
 }
 
 interface UserData {
-  id: number;
-  email: string;
-  role_id: number;
+  id: number
+  email: string
+  role_id: number
+}
+
+// Skeleton loader component mimicking the home screen layout
+const HomeScreenSkeleton = () => {
+  return (
+    <View className="flex-1 bg-white">
+      <ScrollView
+        className="flex-1 bg-white px-5"
+        contentContainerStyle={{ paddingTop: 64, paddingBottom: 80 }}
+      >
+        {/* Header */}
+        <View className="flex-row justify-between items-center mt-5 min-h-10">
+          <Text className="text-2xl font-semibold">Activities</Text>
+          <View className="p-2">
+            <FilterIcon showCircle={false} />
+          </View>
+        </View>
+
+        {/* Search Bar */}
+        <View className="mt-4 flex-row items-center rounded-md border border-gray-200">
+          <View className="px-3">
+            <SearchIcon width={24} height={24} stroke="black" />
+          </View>
+          <TextInput
+            editable={false}
+            className="flex-1 py-2 text-sm"
+            placeholder="Search scans..."
+          />
+        </View>
+
+        {/* Date Summary */}
+        <View className="flex-row justify-between rounded-md bg-color3 p-3 mt-5">
+          <View className="h-4 w-16 bg-color3 rounded" />
+          <View className="h-4 w-16 bg-color3 rounded" />
+        </View>
+
+        {/* Scan List Skeleton */}
+        <View className="gap-4 mt-5">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <View key={index} className="bg-white rounded-lg">
+              <View className="p-4">
+                <View className="flex-row justify-between items-center">
+                  <View className="flex-row gap-2 items-center">
+                    <View className="w-10 h-10 bg-color3 rounded-full" />
+                    <View className="h-4 w-24 bg-color3 rounded" />
+                  </View>
+                  <View className="flex-row gap-1">
+                    <View className="h-4 w-12 bg-color3 rounded" />
+                    <View className="h-4 w-16 bg-color3 rounded" />
+                  </View>
+                </View>
+                <View className="mt-3">
+                  <View className="flex-row items-center gap-2">
+                    <View className="h-3 w-10 bg-color3 rounded" />
+                    <View className="h-3 w-28 bg-color3 rounded" />
+                  </View>
+                  <View className="flex-row items-center mt-2 gap-2">
+                    <View className="h-3 w-10 bg-color3 rounded" />
+                    <View className="h-3 w-28 bg-color3 rounded" />
+                  </View>
+                </View>
+              </View>
+              <View className="py-2 flex-row gap-3 justify-between px-4 bg-color3">
+                <View className="flex-row gap-2 items-center">
+                  <View className="h-3 w-20 bg-color3 rounded" />
+                </View>
+                <View className="flex-row items-center">
+                  <View className="h-3 w-32 bg-color3 rounded" />
+                </View>
+              </View>
+            </View>
+          ))}
+        </View>
+      </ScrollView>
+    </View>
+  )
 }
 
 const HomeScreen = () => {
+  // Data and loading state
   const [scans, setScans] = useState<CustomerScan[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [selectedDealership, setSelectedDealership] = useState<DealershipSelection | null>(null)
   const [userData, setUserData] = useState<UserData | null>(null)
 
+  // UI states for search and filter
+  const [searchQuery, setSearchQuery] = useState('')
+  const [isFocused, setIsFocused] = useState(false)
+  const [isFilterVisible, setIsFilterVisible] = useState(false)
+  const inputRef = useRef<TextInput>(null)
+
+  // Fetch scans using your API logic
   const fetchScans = async () => {
     try {
       setLoading(true)
-      
       // Get user data from AsyncStorage
       const userDataStr = await AsyncStorage.getItem('userData')
       if (!userDataStr) {
@@ -78,14 +177,14 @@ const HomeScreen = () => {
       }
 
       // Fetch scans for the selected brand/department
-      const response = await axios.get(`${API_URL}/customer-scans/user/${user.id}`, {
+      const response = await axios.get(`${API_URL}/api/customer-scans/user/${user.id}`, {
         params: {
           brandId: dealershipSelection.brand.id,
-          departmentId: dealershipSelection.department?.id
+          departmentId: dealershipSelection.department?.id,
         },
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       })
 
       setScans(response.data)
@@ -98,7 +197,7 @@ const HomeScreen = () => {
     }
   }
 
-  const onRefresh = () => {
+  const handleRefresh = () => {
     setRefreshing(true)
     fetchScans()
   }
@@ -107,76 +206,230 @@ const HomeScreen = () => {
     fetchScans()
   }, [])
 
-  if (loading) {
+  if (loading || refreshing) {
+    return <HomeScreenSkeleton />
+  }
+
+  // Simple local search filter based on customer name, email, or phone
+  const filteredScans = scans.filter((scan) => {
+    if (!searchQuery) return true
+    const query = searchQuery.toLowerCase()
     return (
-      <View className="flex-1 bg-white items-center justify-center">
-        <ActivityIndicator size="large" color="#0000ff" />
-      </View>
+      scan.customer.name.toLowerCase().includes(query) ||
+      (scan.customer.email && scan.customer.email.toLowerCase().includes(query)) ||
+      (scan.customer.phone && scan.customer.phone.toLowerCase().includes(query))
     )
+  })
+
+  // Date summary (using today's date)
+  const todayFormatted = format(new Date(), 'EEEE, d MMMM')
+  const totalActivities = filteredScans.length
+
+  // Helper to get initials from a name
+  const getInitials = (name: string): string => {
+    if (!name) return 'CU'
+    const nameParts = name.split(' ')
+    const firstName = nameParts[0] || ''
+    const lastName = nameParts[1] || ''
+    return lastName
+      ? `${firstName[0].toUpperCase()}${lastName[0].toUpperCase()}`
+      : `${firstName[0].toUpperCase()}`
+  }
+
+  // Helper to format dates
+  const formatDate = (dateString: string | null, isLastScanned: boolean = false): string => {
+    if (!dateString) return 'No date'
+    const date = new Date(dateString)
+    return isLastScanned
+      ? format(date, 'd MMM yyyy, h:mm a')
+      : format(date, 'MMM d, yyyy')
   }
 
   return (
-    <ScrollView 
-      className="flex-1 bg-white px-4"
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-    >
-      <Text className="text-2xl font-bold mt-4 mb-2">Your Recent Scans</Text>
-      <Text className="text-gray-600 mb-4">
-        {selectedDealership?.department 
-          ? `${selectedDealership.department.name}`
-          : selectedDealership?.brand.name}
-      </Text>
-      {scans.length === 0 ? (
-        <Text className="text-gray-500 text-center mt-4">No scans found</Text>
-      ) : (
-        scans.map(scan => (
-          <Card key={scan.id} className="mb-4 p-4">
-            <View className="flex-row justify-between items-start">
-              <View className="flex-1">
-                <Text className="text-lg font-semibold">{scan.customer.name}</Text>
-                {scan.customer.email && (
-                  <Text className="text-gray-600">{scan.customer.email}</Text>
-                )}
-                {scan.customer.phone && (
-                  <Text className="text-gray-600">{scan.customer.phone}</Text>
-                )}
-              </View>
-              <View className="items-end">
-                <Text 
-                  className={`px-2 py-1 rounded-full text-sm ${
-                    scan.interest_status === 'Hot' 
-                      ? 'bg-red-100 text-red-800' 
-                      : scan.interest_status === 'Warm' 
-                      ? 'bg-orange-100 text-orange-800'
-                      : 'bg-blue-100 text-blue-800'
-                  }`}
-                >
-                  {scan.interest_status}
-                </Text>
-              </View>
+    <View className="flex-1 bg-white">
+      <ScrollView
+        className="flex-1 bg-white px-5"
+        contentContainerStyle={{ paddingTop: 64, paddingBottom: 80 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={['#3D12FA']}
+            tintColor="#3D12FA"
+            progressViewOffset={40}
+          />
+        }
+      >
+        {/* Header */}
+        <View className="flex-row justify-between items-center mt-5 min-h-10">
+          <Text className="text-2xl font-semibold">Activities</Text>
+          <View className="p-2">
+            <FilterIcon showCircle={false} />
+          </View>
+        </View>
+
+        {/* Search Bar */}
+        <View
+          className={`mt-4 flex-row items-center rounded-md border ${
+            isFocused ? 'border-color1' : 'border-gray-200'
+          }`}
+        >
+          <View className="px-3">
+            <SearchIcon width={24} height={24} stroke={isFocused ? '#3D12FA' : 'black'} />
+          </View>
+          <TextInput
+            ref={inputRef}
+            className="flex-1 py-2 text-sm"
+            placeholder="Search scans..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
+          />
+          {searchQuery ? (
+            <TouchableOpacity className="px-3" onPress={() => setSearchQuery('')}>
+              <CloseIcon width={20} height={20} />
+            </TouchableOpacity>
+          ) : null}
+        </View>
+
+        {/* Date Summary */}
+        <View className="flex-row justify-between rounded-md bg-color3 p-3 mt-5">
+          <Text className="text-xs font-bold">
+            Today <Text className="font-normal">{todayFormatted}</Text>
+          </Text>
+          <Text className="text-xs font-bold">
+            <Text className="font-normal">Total:</Text> {totalActivities}
+          </Text>
+        </View>
+
+        {/* Scans List */}
+        {filteredScans.length === 0 ? (
+          <View className="mt-5 items-center">
+            <Text className="text-gray-500">No scans found</Text>
+          </View>
+        ) : (
+          <View className="gap-4 mt-5">
+            {filteredScans.map((scan) => (
+              <TouchableOpacity
+                key={scan.id}
+                className="bg-white rounded-lg border border-gray-200"
+                onPress={async () => {
+                  try {
+                    await AsyncStorage.setItem('selectedCustomerId', scan.customer_id.toString())
+                    await AsyncStorage.setItem('selectedScanId', scan.id.toString())
+                    router.push('/customer-details')
+                  } catch (error) {
+                    console.error('Error storing customer data:', error)
+                    Alert.alert('Error', 'Failed to load customer details')
+                  }
+                }}
+              >
+                <View className="p-4">
+                  <View className="flex-row justify-between items-center">
+                    <View className="flex-row gap-2 items-center">
+                      <View className="w-10 h-10 bg-indigo-500 rounded-full flex items-center justify-center">
+                        <Text className="text-white font-bold text-sm">
+                          {getInitials(scan.customer.name)}
+                        </Text>
+                      </View>
+                      <View>
+                        <Text className="font-bold text-sm">
+                          {scan.customer.name || 'Unknown Customer'}
+                        </Text>
+                      </View>
+                    </View>
+                    <View className="flex-row gap-1">
+                      <Text
+                        className={`rounded-full text-[10px] border font-medium px-2 py-0.5 ${
+                          scan.interest_status === 'Hot'
+                            ? 'border-red-400 bg-red-100 text-red-600'
+                            : scan.interest_status === 'Warm'
+                            ? 'border-orange-400 bg-orange-100 text-orange-600'
+                            : 'border-blue-400 bg-blue-100 text-blue-600'
+                        }`}
+                      >
+                        {scan.interest_status}
+                      </Text>
+                      <Text
+                        className={`rounded-full text-[10px] border font-medium px-2 py-0.5 ${
+                          scan.interested_in === 'Buying'
+                            ? 'border-green-400 bg-green-100 text-green-600'
+                            : scan.interested_in === 'Selling'
+                            ? 'border-blue-400 bg-blue-100 text-blue-600'
+                            : scan.interested_in === 'Financing'
+                            ? 'border-purple-400 bg-purple-100 text-purple-600'
+                            : scan.interested_in === 'Bought'
+                            ? 'border-violet-400 bg-violet-100 text-violet-600'
+                            : 'border-gray-400 bg-color3 text-gray-600'
+                        }`}
+                      >
+                        {scan.interested_in || ''}
+                      </Text>
+                    </View>
+                  </View>
+                  <View className="mt-3">
+                    <View className="flex-row items-center gap-2">
+                      <PhoneIcon width={15} height={15} />
+                      <Text className="text-[10px] text-gray-500">
+                        {scan.customer.phone || 'No phone number'}
+                      </Text>
+                    </View>
+                    <View className="flex-row items-center mt-2 gap-2">
+                      <EmailIcon width={15} height={15} />
+                      <Text className="text-[10px] text-gray-500">
+                        {scan.customer.email || 'No email'}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+                <View className="py-2 flex-row gap-3 justify-between border-t border-gray-200 px-4 bg-color3">
+                  <View className="flex-row gap-2 items-center">
+                    <Text className="font-bold text-gray-500 text-[10px]">Follow Up:</Text>
+                    <View className="flex-row gap-1 items-center bg-gray-400 rounded py-0.5 px-1.5">
+                      <CalendarIcon width={15} height={15} stroke="white" />
+                      <Text className="text-[10px] text-white">
+                        {formatDate(scan.follow_up_date)}
+                      </Text>
+                    </View>
+                  </View>
+                  <View className="flex-row items-center">
+                    <Text className="text-gray-500 text-[10px] font-bold">
+                      Last Scanned:{' '}
+                      <Text className="font-normal">
+                        {formatDate(scan.created_at, true)}
+                      </Text>
+                    </Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {/* Filter Modal (placeholder) */}
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={isFilterVisible}
+          onRequestClose={() => setIsFilterVisible(false)}
+        >
+          <View className="flex-1 justify-end bg-transparent">
+            <TouchableOpacity
+              className="flex-1"
+              activeOpacity={1}
+              onPress={() => setIsFilterVisible(false)}
+            >
+              <View className="flex-1" />
+            </TouchableOpacity>
+            <View className="bg-white rounded-t-3xl p-6" style={{ height: '40%' }}>
+              <Text className="text-center text-lg font-bold">Filter Modal</Text>
+              {/* Add your filter options here */}
             </View>
-            
-            {scan.interested_in && (
-              <Text className="text-gray-700 mt-2">
-                Interested in: {scan.interested_in}
-              </Text>
-            )}
-            
-            {scan.follow_up_date && (
-              <Text className="text-gray-700">
-                Follow up: {format(new Date(scan.follow_up_date), 'MMM d, yyyy')}
-              </Text>
-            )}
-            
-            <Text className="text-gray-500 text-sm mt-2">
-              Scanned on {format(new Date(scan.created_at), 'MMM d, yyyy h:mm a')}
-            </Text>
-          </Card>
-        ))
-      )}
-    </ScrollView>
+          </View>
+        </Modal>
+      </ScrollView>
+    </View>
   )
 }
 

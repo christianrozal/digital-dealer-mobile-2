@@ -5,7 +5,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { Platform } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 
@@ -29,31 +29,51 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack 
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: 'white' },
-          animation: 'slide_from_right',
-          animationDuration: 200,
-        }}
-      >
-        <Stack.Screen name="index" />
-        <Stack.Screen name="login/index" />
-        <Stack.Screen name="dealerships/index" />
-        <Stack.Screen name="home/index" />
-        <Stack.Screen 
-          name="qr-scanner/index"
-          options={{
-            presentation: 'modal',
-            animation: 'slide_from_bottom',
-            animationDuration: 300,
-            contentStyle: { backgroundColor: 'transparent' },
-          }}
-        />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <SafeAreaView style={{ flex: 1 }}>
+          <Stack 
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: 'white' },
+              animation: 'slide_from_right',
+              animationDuration: 200,
+            }}
+          >
+            <Stack.Screen name="index" />
+            <Stack.Screen name="login/index" />
+            <Stack.Screen name="dealerships/index" />
+            <Stack.Screen name="home" />
+            <Stack.Screen name="customer-details/edit/index"
+              options={{
+                animation: 'slide_from_right',
+                animationDuration: 200,
+              }} />
+            <Stack.Screen 
+              name="customer-details/index" 
+              options={{
+                animation: 'simple_push',
+                animationDuration: 200,
+              }}
+            />
+            <Stack.Screen name="customer-log/index"
+              options={{
+                animation: 'slide_from_bottom',
+                animationDuration: 200,
+              }}
+            />
+            <Stack.Screen 
+              name="qr-scanner/index"
+              options={{
+                animation: 'slide_from_bottom',
+                animationDuration: 200,
+              }}
+            />
+            <Stack.Screen name="+not-found" />
+          </Stack>
+          <StatusBar style="auto" />
+        </SafeAreaView>
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }
