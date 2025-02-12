@@ -29,6 +29,15 @@ app.use(cors({
 
 app.use(express.json());
 
+// Root route - no auth required
+app.get('/', (req: Request, res: Response) => {
+  res.json({
+    message: 'Digital Dealer Mobile API',
+    version: '1.0.0',
+    status: 'running'
+  });
+});
+
 // Health check endpoint - no auth required
 app.get('/api/health', (req: Request, res: Response) => {
   res.json({
