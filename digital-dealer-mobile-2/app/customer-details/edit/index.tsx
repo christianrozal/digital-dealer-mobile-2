@@ -139,12 +139,12 @@ const EditCustomerScreen = () => {
   }
 
   const getInitials = (name: string) => {
-    if (!name) return 'CU'
+    if (!name) return 'LD'
     const nameParts = name.split(' ')
     const firstName = nameParts[0] || ''
     const lastName = nameParts[1] || ''
     
-    if (!firstName) return 'CU'
+    if (!firstName) return 'LD'
     
     if (lastName) {
       return `${firstName[0].toUpperCase()}${lastName[0].toUpperCase()}`
