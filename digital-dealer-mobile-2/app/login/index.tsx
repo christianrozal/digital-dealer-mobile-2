@@ -1,6 +1,7 @@
 import AlexiumLogoIcon from "@/components/svg/alexiumLogo";
 import ButtonComponent from "@/components/ui/button";
 import Checkbox from "@/components/ui/checkbox";
+import { API_URL } from "@/constants";
 import { router } from "expo-router";
 import React, { useState, useEffect } from "react";
 import {
@@ -12,8 +13,6 @@ import {
   Platform,
 } from "react-native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const API_URL = 'http://172.16.21.184:3000/api';
 
 console.log('🌐 Using API URL:', API_URL);
 
@@ -55,7 +54,7 @@ const LoginScreen = () => {
 
     try {
       setIsLoading(true);
-      const response = await fetch(`${API_URL}/auth/login`, {
+      const response = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

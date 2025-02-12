@@ -5,8 +5,7 @@ import { router } from "expo-router";
 import Select from "@/components/ui/select";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ButtonComponent from "@/components/ui/button";
-const API_URL = 'http://172.16.21.184:3000/api';
-const AUTH_API = `${API_URL}/auth`;
+import { API_URL } from "@/constants";
 
 interface Option {
   id: string;
@@ -98,7 +97,7 @@ const DealershipsScreen = () => {
           return;
         }
 
-        const response = await fetch(`${API_URL}/dealership-info`, {
+        const response = await fetch(`${API_URL}/api/dealership-info`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Accept': 'application/json',
@@ -135,7 +134,7 @@ const DealershipsScreen = () => {
           return;
         }
 
-        const response = await fetch(`${AUTH_API}/dealerships`, {
+        const response = await fetch(`${API_URL}/api/auth/dealerships`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Accept': 'application/json',
@@ -190,7 +189,7 @@ const DealershipsScreen = () => {
           return;
         }
 
-        const response = await fetch(`${AUTH_API}/dealerships/${selectedBrand.id}/departments`, {
+        const response = await fetch(`${API_URL}/api/auth/dealerships/${selectedBrand.id}/departments`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Accept': 'application/json',
