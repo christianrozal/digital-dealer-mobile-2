@@ -5,7 +5,7 @@
     "dev": "nodemon --exec ts-node src/api.ts",
     "build": "prisma generate && tsc",
     "start": "node dist/api.js",
-    "vercel-build": "prisma generate && tsc",
+    "vercel-build": "prisma generate && tsc --project tsconfig.json",
     "postinstall": "prisma generate",
     "queries": "ts-node ./src/queries.ts",
     "caching": "ts-node ./src/caching.ts",
