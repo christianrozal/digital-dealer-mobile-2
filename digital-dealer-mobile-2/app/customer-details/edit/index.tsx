@@ -8,6 +8,7 @@ import axios from 'axios'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { API_URL } from '@/constants'
 import * as ImagePicker from 'expo-image-picker'
+import CameraIcon from "@/components/svg/cameraIcon";
 
 interface Customer {
   id: number
@@ -300,7 +301,7 @@ const EditCustomerScreen = () => {
               />
             ) : (
               <View
-                className="bg-color1 rounded-full items-center justify-center"
+                className="bg-color1 rounded-full items-center justify-center relative"
                 style={{ width: 100, height: 100 }}
               >
                 <Text className="text-white font-bold" style={{ fontSize: 30 }}>
@@ -308,6 +309,9 @@ const EditCustomerScreen = () => {
                 </Text>
               </View>
             )}
+            <View className="absolute bottom-0 right-1">
+              <CameraIcon width={20} height={20} />
+            </View>
             {uploadingImage && (
               <Text className="text-center mt-2 text-gray-500">Uploading...</Text>
             )}
