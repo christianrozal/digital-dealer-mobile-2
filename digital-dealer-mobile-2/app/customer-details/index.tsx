@@ -120,7 +120,7 @@ const SelectedCustomerScreen = () => {
         }
 
         const response = await axios.get(
-          `${API_URL}/api/customer-scans/${customerId}/${scanId}`,
+          `${API_URL}/api/customer-scans/details/${customerId}/${scanId}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,

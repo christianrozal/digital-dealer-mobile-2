@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -23,6 +23,9 @@ import FilterIcon from '@/components/svg/filterIcon';
 import PhoneIcon from '@/components/svg/phoneIcon';
 import CloseIcon from '@/components/svg/closeIcon';
 import AddIcon from '@/components/svg/addIcon';
+
+// Import components
+import ActivitiesFilter, { ActivityFilters } from '@/components/activitiesFilter';
 
 //
 // Type definitions
@@ -129,6 +132,14 @@ const CustomersScreenSkeleton = () => {
 // CustomersScreen Component
 //
 
+const DEFAULT_FILTERS: ActivityFilters = {
+  fromDate: dayjs().startOf('day').toISOString(),
+  toDate: dayjs().endOf('day').toISOString(),
+  sortBy: "last_scanned_newest_to_oldest",
+  interestedIn: [],
+  interestStatus: []
+};
+
 const CustomersScreen = () => {
   // Data state
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -147,9 +158,24 @@ const CustomersScreen = () => {
   const [isFilterVisible, setIsFilterVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [sortBy, setSortBy] = useState<string | null>(null);
+  const [filters, setFilters] = useState<ActivityFilters>(DEFAULT_FILTERS);
 
   const inputRef = useRef<TextInput>(null);
   const scrollViewRef = useRef<ScrollView>(null);
+
+  // Check if any filter is active
+  const hasActiveFilters = () => {
+    const isToday = 
+      dayjs(filters.fromDate).isSame(dayjs().startOf('day'), 'day') &&
+      dayjs(filters.toDate).isSame(dayjs().endOf('day'), 'day');
+
+    return (
+      !isToday || // Date range is not today
+      filters.sortBy !== DEFAULT_FILTERS.sortBy ||
+      filters.interestedIn.length > 0 ||
+      filters.interestStatus.length > 0
+    );
+  };
 
   // ─── FETCH CUSTOMERS FROM API ──────────────────────────────────────────────
   const fetchCustomers = async (page: number = 1, isLoadMore: boolean = false) => {
@@ -187,13 +213,18 @@ const CustomersScreen = () => {
       }
 
       // Fetch unique customers for the selected brand/department
-      const response = await axios.get(`${API_URL}/api/customer-scans/user/${userData.id}/unique-customers`, {
+      const response = await axios.get(`${API_URL}/api/customer-scans/user/${userData.id}/unique`, {
         params: {
           brandId: dealershipSelection.brand.id,
           departmentId: dealershipSelection.department?.id,
           page,
           limit: 10,
-          search: searchQuery || undefined
+          search: searchQuery || undefined,
+          fromDate: filters.fromDate,
+          toDate: filters.toDate,
+          sortBy: filters.sortBy,
+          interestedIn: filters.interestedIn.length > 0 ? filters.interestedIn : undefined,
+          interestStatus: filters.interestStatus.length > 0 ? filters.interestStatus : undefined
         },
         headers: {
           'Authorization': `Bearer ${token}`
@@ -374,7 +405,7 @@ const CustomersScreen = () => {
             onPress={() => setIsFilterVisible(true)}
             className="relative p-2"
           >
-            <FilterIcon showCircle={false} />
+            <FilterIcon showCircle={hasActiveFilters()} />
           </TouchableOpacity>
         </View>
 
@@ -446,24 +477,39 @@ const CustomersScreen = () => {
           </>
         )}
 
-        {/* Filter Modal (placeholder) */}
+        {/* Filter Modal */}
         <Modal
           animationType="slide"
           transparent={true}
           visible={isFilterVisible}
           onRequestClose={() => setIsFilterVisible(false)}
         >
-          <View className="flex-1 justify-end bg-transparent">
-            <TouchableOpacity
-              className="flex-1"
+          <View className="flex-1 bg-black/20 justify-end">
+            <TouchableOpacity 
+              className="absolute inset-0" 
               activeOpacity={1}
               onPress={() => setIsFilterVisible(false)}
-            >
-              <View className="flex-1" />
-            </TouchableOpacity>
-            <View className="bg-white rounded-t-3xl p-6" style={{ height: "40%" }}>
-              <Text className="text-center text-lg font-bold">Filter Modal</Text>
-              {/* Add your filter options here */}
+            />
+            <View className="bg-white h-[70%] rounded-t-2xl p-5">
+              <ActivitiesFilter
+                filters={filters}
+                onUpdateFilters={(newFilters) => {
+                  setFilters((prev) => ({
+                    ...prev,
+                    ...newFilters,
+                  }))
+                }}
+                onResetFilters={() => {
+                  setFilters(DEFAULT_FILTERS)
+                  setIsFilterVisible(false)
+                  fetchCustomers(1, false)
+                }}
+                onClose={() => {
+                  fetchCustomers(1, false)
+                  setIsFilterVisible(false)
+                }}
+                variant="customers"
+              />
             </View>
           </View>
         </Modal>

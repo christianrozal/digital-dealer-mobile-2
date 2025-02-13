@@ -13,7 +13,7 @@ import {
 import axios from 'axios'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { router } from 'expo-router'
-import { format } from 'date-fns'
+import dayjs from 'dayjs'
 
 // Import your icons (adjust paths as needed)
 import SearchIcon from '@/components/svg/searchIcon'
@@ -23,6 +23,7 @@ import PhoneIcon from '@/components/svg/phoneIcon'
 import EmailIcon from '@/components/svg/emailIcon'
 import CalendarIcon from '@/components/svg/calendar'
 import { API_URL } from '@/constants'
+import ActivitiesFilter, { ActivityFilters } from '@/components/activitiesFilter'
 
 interface CustomerScan {
   id: number
@@ -135,6 +136,14 @@ const HomeScreenSkeleton = () => {
   )
 }
 
+const DEFAULT_FILTERS: ActivityFilters = {
+  fromDate: dayjs().startOf('day').toISOString(),
+  toDate: dayjs().endOf('day').toISOString(),
+  sortBy: "last_scanned_newest_to_oldest",
+  interestedIn: [],
+  interestStatus: []
+};
+
 const HomeScreen = () => {
   // Data and loading state
   const [scans, setScans] = useState<CustomerScan[]>([])
@@ -147,7 +156,36 @@ const HomeScreen = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [isFocused, setIsFocused] = useState(false)
   const [isFilterVisible, setIsFilterVisible] = useState(false)
+  const [filters, setFilters] = useState<ActivityFilters>(DEFAULT_FILTERS)
   const inputRef = useRef<TextInput>(null)
+
+  // Load saved filters
+  useEffect(() => {
+    const loadSavedFilters = async () => {
+      try {
+        const savedFilters = await AsyncStorage.getItem('activityFilters')
+        if (savedFilters) {
+          setFilters(JSON.parse(savedFilters))
+        }
+      } catch (error) {
+        console.error('Error loading filters:', error)
+      }
+    }
+    loadSavedFilters()
+  }, [])
+
+  // Save filters when they change and fetch scans
+  useEffect(() => {
+    const saveFilters = async () => {
+      try {
+        await AsyncStorage.setItem('activityFilters', JSON.stringify(filters))
+        fetchScans() // Fetch scans whenever filters change
+      } catch (error) {
+        console.error('Error saving filters:', error)
+      }
+    }
+    saveFilters()
+  }, [filters])
 
   // Fetch scans using your API logic
   const fetchScans = async () => {
@@ -178,18 +216,43 @@ const HomeScreen = () => {
         return
       }
 
-      // Fetch scans for the selected brand/department
+      // Fetch scans for the selected brand/department with filters
       const response = await axios.get(`${API_URL}/api/customer-scans/user/${user.id}`, {
         params: {
           brandId: dealershipSelection.brand.id,
           departmentId: dealershipSelection.department?.id,
+          fromDate: filters.fromDate,
+          toDate: filters.toDate,
+          sortBy: filters.sortBy,
+          interestedIn: filters.interestedIn.length > 0 ? filters.interestedIn : undefined,
+          interestStatus: filters.interestStatus.length > 0 ? filters.interestStatus : undefined,
         },
         headers: {
           Authorization: `Bearer ${token}`,
         },
       })
 
-      setScans(response.data)
+      // Sort the scans based on the selected sort option
+      let sortedScans = [...response.data];
+      switch (filters.sortBy) {
+        case 'a_to_z':
+          sortedScans.sort((a, b) => a.customer.name.localeCompare(b.customer.name));
+          break;
+        case 'z_to_a':
+          sortedScans.sort((a, b) => b.customer.name.localeCompare(a.customer.name));
+          break;
+        case 'last_scanned_newest_to_oldest':
+          sortedScans.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+          break;
+        case 'last_scanned_oldest_to_newest':
+          sortedScans.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+          break;
+        // Note: scans_low_to_high and scans_high_to_low would require additional data from the backend
+        default:
+          break;
+      }
+
+      setScans(sortedScans);
     } catch (error) {
       console.error('Error fetching scans:', error)
       setScans([])
@@ -204,9 +267,10 @@ const HomeScreen = () => {
     fetchScans()
   }
 
+  // Initial fetch on mount
   useEffect(() => {
     fetchScans()
-  }, [])
+  }, []) // Only fetch on mount
 
   if (loading || refreshing) {
     return <HomeScreenSkeleton />
@@ -223,8 +287,25 @@ const HomeScreen = () => {
     )
   })
 
-  // Date summary (using today's date)
-  const todayFormatted = format(new Date(), 'EEEE, d MMMM')
+  // Date summary label and formatting
+  const getDateLabel = () => {
+    const isToday = 
+      dayjs(filters.fromDate).isSame(dayjs().startOf('day'), 'day') &&
+      dayjs(filters.toDate).isSame(dayjs().endOf('day'), 'day');
+
+    if (isToday) {
+      return {
+        label: 'Today',
+        date: dayjs().format('dddd, D MMMM')
+      };
+    }
+
+    return {
+      label: 'Date Range',
+      date: `${dayjs(filters.fromDate).format('D MMM')} - ${dayjs(filters.toDate).format('D MMM YYYY')}`
+    };
+  };
+
   const totalActivities = filteredScans.length
 
   // Helper to get initials from a name
@@ -241,11 +322,24 @@ const HomeScreen = () => {
   // Helper to format dates
   const formatDate = (dateString: string | null, isLastScanned: boolean = false): string => {
     if (!dateString) return 'No date'
-    const date = new Date(dateString)
     return isLastScanned
-      ? format(date, 'd MMM yyyy, h:mm a')
-      : format(date, 'MMM d, yyyy')
+      ? dayjs(dateString).format('D MMM YYYY, h:mm A')
+      : dayjs(dateString).format('MMM D, YYYY')
   }
+
+  // Check if any filter is active
+  const hasActiveFilters = () => {
+    const isToday = 
+      dayjs(filters.fromDate).isSame(dayjs().startOf('day'), 'day') &&
+      dayjs(filters.toDate).isSame(dayjs().endOf('day'), 'day');
+
+    return (
+      !isToday || // Date range is not today
+      filters.sortBy !== DEFAULT_FILTERS.sortBy ||
+      filters.interestedIn.length > 0 ||
+      filters.interestStatus.length > 0
+    );
+  };
 
   return (
     <View className="flex-1 bg-white">
@@ -265,9 +359,9 @@ const HomeScreen = () => {
         {/* Header */}
         <View className="flex-row justify-between items-center mt-5 min-h-10">
           <Text className="text-2xl font-semibold">Activities</Text>
-          <View className="p-2">
-            <FilterIcon showCircle={false} />
-          </View>
+          <TouchableOpacity className="p-2" onPress={() => setIsFilterVisible(true)}>
+            <FilterIcon showCircle={hasActiveFilters()} />
+          </TouchableOpacity>
         </View>
 
         {/* Search Bar */}
@@ -298,7 +392,7 @@ const HomeScreen = () => {
         {/* Date Summary */}
         <View className="flex-row justify-between rounded-md bg-color3 p-3 mt-5">
           <Text className="text-xs font-bold">
-            Today <Text className="font-normal">{todayFormatted}</Text>
+            {getDateLabel().label} <Text className="font-normal">{getDateLabel().date}</Text>
           </Text>
           <Text className="text-xs font-bold">
             <Text className="font-normal">Total:</Text> {totalActivities}
@@ -318,8 +412,20 @@ const HomeScreen = () => {
                 className="bg-white rounded-lg border border-gray-200"
                 onPress={async () => {
                   try {
+                    // Get all scans for this customer and find the latest one by date
+                    const customerScans = scans.filter(s => s.customer_id === scan.customer_id);
+                    const latestScan = customerScans.reduce((latest, current) => {
+                      if (!latest) return current;
+                      return new Date(current.created_at) > new Date(latest.created_at) ? current : latest;
+                    }, customerScans[0]);
+
+                    if (!latestScan) {
+                      Alert.alert('Error', 'Could not find latest scan for customer');
+                      return;
+                    }
+
                     await AsyncStorage.setItem('selectedCustomerId', scan.customer_id.toString())
-                    await AsyncStorage.setItem('selectedScanId', scan.id.toString())
+                    await AsyncStorage.setItem('selectedScanId', latestScan.id.toString())
                     router.replace('/customer-details')
                   } catch (error) {
                     console.error('Error storing customer data:', error)
@@ -440,24 +546,37 @@ const HomeScreen = () => {
           </View>
         )}
 
-        {/* Filter Modal (placeholder) */}
+        {/* Filter Modal */}
         <Modal
           animationType="slide"
           transparent={true}
           visible={isFilterVisible}
           onRequestClose={() => setIsFilterVisible(false)}
         >
-          <View className="flex-1 justify-end bg-transparent">
-            <TouchableOpacity
-              className="flex-1"
+          <View className="flex-1 bg-black/20 justify-end">
+            <TouchableOpacity 
+              className="absolute inset-0" 
               activeOpacity={1}
               onPress={() => setIsFilterVisible(false)}
-            >
-              <View className="flex-1" />
-            </TouchableOpacity>
-            <View className="bg-white rounded-t-3xl p-6" style={{ height: '40%' }}>
-              <Text className="text-center text-lg font-bold">Filter Modal</Text>
-              {/* Add your filter options here */}
+            />
+            <View className="bg-white h-[70%] rounded-t-2xl p-5">
+              <ActivitiesFilter
+                filters={filters}
+                onUpdateFilters={(newFilters) => {
+                  setFilters((prev) => ({
+                    ...prev,
+                    ...newFilters,
+                  }))
+                }}
+                onResetFilters={() => {
+                  setFilters(DEFAULT_FILTERS)
+                  fetchScans() // Fetch when resetting filters
+                }}
+                onClose={() => {
+                  fetchScans() // Fetch when applying filters
+                  setIsFilterVisible(false)
+                }}
+              />
             </View>
           </View>
         </Modal>

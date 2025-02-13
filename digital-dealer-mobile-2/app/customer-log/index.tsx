@@ -307,8 +307,9 @@ const CustomerLogScreen = () => {
                     return;
                 }
 
-                const response = await axios.get(
-                    `${API_URL}/api/customer-scans/${customerId}/${scanId}`,
+                // First get the customer details
+                const detailsResponse = await axios.get(
+                    `${API_URL}/api/customer-scans/details/${customerId}/${scanId}`,
                     {
                         headers: {
                             Authorization: `Bearer ${token}`
@@ -316,12 +317,22 @@ const CustomerLogScreen = () => {
                     }
                 );
 
-                setCustomerScan(response.data);
+                // Then get the customer logs
+                const logsResponse = await axios.get(
+                    `${API_URL}/api/customer-scans/logs/${customerId}`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
+                    }
+                );
+
+                setCustomerScan(detailsResponse.data);
                 
                 // Set initial values based on customer data
-                setValue(response.data.interest_status || null);
-                if (response.data.interested_in) {
-                    setInterestedIn([response.data.interested_in]);
+                setValue(detailsResponse.data.interest_status || null);
+                if (detailsResponse.data.interested_in) {
+                    setInterestedIn([detailsResponse.data.interested_in]);
                 }
             } catch (error) {
                 console.error('Error loading customer data:', error);
@@ -516,7 +527,22 @@ const CustomerLogScreen = () => {
                 return;
             }
 
-            // If there's a comment, post it first
+            // Update the scan first
+            await axios.put(
+                `${API_URL}/api/customer-scans/scan/${customerScan.id}`,
+                {
+                    interest_status: value,
+                    interested_in: interestedIn[0] || null,
+                    follow_up_date: null // TODO: Add follow up date handling
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            );
+
+            // If there's a comment, post it
             if (comment.trim()) {
                 await axios.post(
                     `${API_URL}/api/comments`,
@@ -533,7 +559,7 @@ const CustomerLogScreen = () => {
                 setComment(''); // Clear the comment input
             }
 
-            // Switch to thread tab instead of navigating
+            // Switch to thread tab and refresh comments
             setActiveTab('thread');
             setLoadingComments(true);
             setComments([]); // Clear existing comments before loading new ones

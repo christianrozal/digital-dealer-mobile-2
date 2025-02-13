@@ -65,7 +65,7 @@ const EditCustomerScreen = () => {
 
         // Fetch customer scan details
         const response = await axios.get(
-          `${API_URL}/api/customer-scans/${customerId}/${scanId}`,
+          `${API_URL}/api/customer-scans/details/${customerId}/${scanId}`,
           {
             headers: {
               Authorization: `Bearer ${token}`
@@ -121,8 +121,8 @@ const EditCustomerScreen = () => {
       }
 
       // Update customer details through the API
-      await axios.patch(
-        `${API_URL}/api/customer/${customerId}`,
+      await axios.put(
+        `${API_URL}/api/customer-scans/details/${customerId}`,
         {
           name: formData.name.trim(),
           email: formData.email.trim() || null,
@@ -234,21 +234,15 @@ const EditCustomerScreen = () => {
         throw new Error(`Upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`);
       }
 
-      console.log('Upload successful, updating customer profile...');
+      console.log('Upload successful, updating form data...');
 
-      // Update customer with new image URL
-      await axios.patch(
-        `${API_URL}/api/customer/${customerId}`,
-        { profile_image_url: imageUrl },
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
-
+      // Update form data with new image URL
       setFormData(prev => ({
         ...prev,
         profile_image_url: imageUrl
       }));
+
+      // Note: We'll update the profile in the database when the user clicks "Update Customer"
 
     } catch (error: any) {
       console.error('Error uploading image:', error);
