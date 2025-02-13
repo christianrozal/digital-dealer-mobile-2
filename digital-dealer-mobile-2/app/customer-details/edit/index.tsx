@@ -7,12 +7,14 @@ import ButtonComponent from '@/components/ui/button'
 import axios from 'axios'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { API_URL } from '@/constants'
+import * as ImagePicker from 'expo-image-picker'
 
 interface Customer {
   id: number
   name: string
   email: string | null
   phone: string | null
+  profile_image_url: string | null
 }
 
 interface CustomerScan {
@@ -30,10 +32,12 @@ interface CustomerScan {
 
 const EditCustomerScreen = () => {
   const [loading, setLoading] = useState(false)
+  const [uploadingImage, setUploadingImage] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    phone: ''
+    phone: '',
+    profile_image_url: ''
   })
 
   // Get the customer and scan IDs from AsyncStorage on mount
@@ -74,7 +78,8 @@ const EditCustomerScreen = () => {
         setFormData({
           name: customerScan.customer.name || '',
           email: customerScan.customer.email || '',
-          phone: customerScan.customer.phone || ''
+          phone: customerScan.customer.phone || '',
+          profile_image_url: customerScan.customer.profile_image_url || ''
         })
       } catch (error) {
         console.error('Error loading customer data:', error)
@@ -120,7 +125,8 @@ const EditCustomerScreen = () => {
         {
           name: formData.name.trim(),
           email: formData.email.trim() || null,
-          phone: formData.phone.trim() || null
+          phone: formData.phone.trim() || null,
+          profile_image_url: formData.profile_image_url
         },
         {
           headers: {
@@ -153,6 +159,104 @@ const EditCustomerScreen = () => {
     return `${firstName[0].toUpperCase()}${firstName[1]?.toUpperCase() || 'U'}`
   }
 
+  const pickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 1,
+      });
+
+      if (!result.canceled) {
+        const selectedAsset = result.assets[0];
+        await uploadImage(selectedAsset);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image');
+    }
+  };
+
+  const uploadImage = async (imageAsset: ImagePicker.ImagePickerAsset) => {
+    setUploadingImage(true);
+    try {
+      const customerId = await AsyncStorage.getItem('selectedCustomerId');
+      const token = await AsyncStorage.getItem('userToken');
+
+      if (!customerId || !token) {
+        Alert.alert('Error', 'Missing required data');
+        return;
+      }
+
+      // Get the file extension and content type
+      const fileType = imageAsset.uri.split('.').pop()?.toLowerCase();
+      const contentType = fileType === 'png' ? 'image/png' : 
+                         fileType === 'jpg' || fileType === 'jpeg' ? 'image/jpeg' : 
+                         'image/jpeg'; // default to jpeg
+      
+      console.log('Requesting signed URL for upload...');
+      
+      // Get signed URL from backend
+      const { data: { signedUrl, imageUrl } } = await axios.get(
+        `${API_URL}/api/customer/${customerId}/upload-url?fileType=${contentType}`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      console.log('Got signed URL:', signedUrl);
+      console.log('Image URL will be:', imageUrl);
+
+      // Upload to S3
+      const response = await fetch(imageAsset.uri);
+      const blob = await response.blob();
+
+      console.log('Uploading to S3...');
+
+      // Simplified upload with only content-type header
+      const uploadResponse = await fetch(signedUrl, {
+        method: 'PUT',
+        body: blob,
+        headers: {
+          'Content-Type': contentType
+        }
+      });
+
+      if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text();
+        console.error('Upload failed:', {
+          status: uploadResponse.status,
+          statusText: uploadResponse.statusText,
+          error: errorText
+        });
+        throw new Error(`Upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`);
+      }
+
+      console.log('Upload successful, updating customer profile...');
+
+      // Update customer with new image URL
+      await axios.patch(
+        `${API_URL}/api/customer/${customerId}`,
+        { profile_image_url: imageUrl },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      setFormData(prev => ({
+        ...prev,
+        profile_image_url: imageUrl
+      }));
+
+    } catch (error: any) {
+      console.error('Error uploading image:', error);
+      Alert.alert('Error', `Failed to upload image: ${error.message}`);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   return (
     <View className="pt-7 px-7 pb-7 h-full justify-between gap-5">
       <View>
@@ -169,16 +273,45 @@ const EditCustomerScreen = () => {
 
         <View className='px-4'>
           <Text className="text-2xl font-semibold mt-10">Edit Customer Profile</Text>
-          <View className='mt-10 mx-auto'>
-            <View
-              className="bg-color1 rounded-full items-center justify-center"
-              style={{ width: 100, height: 100 }}
-            >
-              <Text className="text-white font-bold" style={{ fontSize: 30 }}>
-                {getInitials(formData.name)}
-              </Text>
-            </View>
-          </View>
+          <TouchableOpacity 
+            onPress={pickImage}
+            disabled={uploadingImage}
+            className='mt-10 mx-auto'
+          >
+            {formData.profile_image_url ? (
+              <Image
+                source={{ 
+                  uri: formData.profile_image_url,
+                  headers: {
+                    'Cache-Control': 'public',
+                    'Pragma': 'public'
+                  }
+                }}
+                className="w-[100px] h-[100px] rounded-full"
+                onError={(error) => {
+                  console.error('Image loading error:', error);
+                  // If image fails to load, fallback to initials
+                  setFormData(prev => ({
+                    ...prev,
+                    profile_image_url: ''
+                  }));
+                }}
+                defaultSource={require('@/assets/images/favicon.png')}
+              />
+            ) : (
+              <View
+                className="bg-color1 rounded-full items-center justify-center"
+                style={{ width: 100, height: 100 }}
+              >
+                <Text className="text-white font-bold" style={{ fontSize: 30 }}>
+                  {getInitials(formData.name)}
+                </Text>
+              </View>
+            )}
+            {uploadingImage && (
+              <Text className="text-center mt-2 text-gray-500">Uploading...</Text>
+            )}
+          </TouchableOpacity>
           <View className='gap-3 mt-10'>
             <TextInput
               className="py-3 px-3 flex-row bg-color3 items-center gap-3 rounded-md text-gray-500 text-sm focus:outline-color1"
@@ -207,7 +340,7 @@ const EditCustomerScreen = () => {
         <ButtonComponent
           label={loading ? "Updating..." : "Update Customer"}
           onPress={handleUpdateCustomer}
-          disabled={loading}
+          disabled={loading || uploadingImage}
           loading={loading}
         />
       </View>

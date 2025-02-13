@@ -18,6 +18,7 @@ interface CustomerScan {
     name: string;
     email: string | null;
     phone: string | null;
+    profile_image_url: string | null;
   };
   interest_status: string;
   created_at: string;
@@ -31,7 +32,7 @@ const CustomerDetailsScreenSkeleton = () => {
       <View>
         {/* Header */}
         <View className="flex-row w-full justify-between items-center">
-          <TouchableOpacity onPress={() => router.back()}>
+          <TouchableOpacity onPress={() => router.push("/home")}>
             <BackArrowIcon />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push("/home")}>
@@ -175,7 +176,7 @@ const SelectedCustomerScreen = () => {
       <View>
         {/* Header */}
         <View className="flex-row w-full justify-between items-center">
-          <TouchableOpacity onPress={() => router.back()}>
+          <TouchableOpacity onPress={() => router.push("/home/customers")}>
             <BackArrowIcon />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push("/home")}>
@@ -205,11 +206,36 @@ const SelectedCustomerScreen = () => {
               shadowRadius: 9.4,
               elevation: 4,
             }}>
-            <View className="bg-color1 rounded-full items-center justify-center w-[100px] h-[100px]">
-              <Text className="text-white font-bold text-[30px]">
-                {getInitials(customerScan.customer.name)}
-              </Text>
-            </View>
+            {customerScan.customer.profile_image_url ? (
+              <Image
+                source={{ 
+                  uri: customerScan.customer.profile_image_url,
+                  headers: {
+                    'Cache-Control': 'public',
+                    'Pragma': 'public'
+                  }
+                }}
+                className="w-[100px] h-[100px] rounded-full"
+                onError={(error) => {
+                  console.error('Image loading error:', error);
+                  // If image fails to load, fallback to initials
+                  setCustomerScan(prev => ({
+                    ...prev!,
+                    customer: {
+                      ...prev!.customer,
+                      profile_image_url: null
+                    }
+                  }));
+                }}
+                defaultSource={require('@/assets/images/favicon.png')}
+              />
+            ) : (
+              <View className="bg-color1 rounded-full items-center justify-center w-[100px] h-[100px]">
+                <Text className="text-white font-bold text-[30px]">
+                  {getInitials(customerScan.customer.name)}
+                </Text>
+              </View>
+            )}
             <Text className="text-2xl font-semibold mt-3">{customerScan.customer.name}</Text>
             <View className="flex-row items-center mt-2 gap-[10px]">
               <Text className="text-xs text-gray-500">Scans: {customerScan.scanCount}</Text>

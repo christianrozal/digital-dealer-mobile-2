@@ -338,7 +338,7 @@ const CustomersScreen = () => {
       {/* Floating Add Button */}
       <TouchableOpacity 
         className="absolute bottom-20 right-5 z-10" 
-        onPress={() => router.push("/add-customer/index")}
+        onPress={() => router.push("/add-customer")}
       >
         <AddIcon />
       </TouchableOpacity>
@@ -413,6 +413,8 @@ const CustomersScreen = () => {
                   customer={customer}
                   getInitials={getInitials}
                   formatDate={formatDate}
+                  setFlatCustomers={setFlatCustomers}
+                  setGroupedCustomers={setGroupedCustomers}
                 />
               ))
             ) : (
@@ -427,6 +429,8 @@ const CustomersScreen = () => {
                       customer={customer}
                       getInitials={getInitials}
                       formatDate={formatDate}
+                      setFlatCustomers={setFlatCustomers}
+                      setGroupedCustomers={setGroupedCustomers}
                     />
                   ))}
                 </View>
@@ -476,9 +480,11 @@ interface CustomerCardProps {
   customer: Customer;
   getInitials: (name: string | undefined) => string;
   formatDate: (date: string | undefined) => string;
+  setFlatCustomers: React.Dispatch<React.SetStateAction<Customer[]>>;
+  setGroupedCustomers: React.Dispatch<React.SetStateAction<{ [key: string]: Customer[] }>>;
 }
 
-const CustomerCard = ({ customer, getInitials, formatDate }: CustomerCardProps) => {
+const CustomerCard = ({ customer, getInitials, formatDate, setFlatCustomers, setGroupedCustomers }: CustomerCardProps) => {
   return (
     <TouchableOpacity
       className="p-3 mt-2 rounded-md flex-row justify-between items-center bg-white shadow-sm"
@@ -494,18 +500,47 @@ const CustomerCard = ({ customer, getInitials, formatDate }: CustomerCardProps) 
       }}
     >
       <View className="items-center flex-row gap-3">
-        <View className="w-10 h-10 bg-indigo-500 rounded-full items-center justify-center">
-          {customer.profileImage ? (
-            <Image
-              source={{ uri: customer.profileImage }}
-              className="w-10 h-10 rounded-full"
-            />
-          ) : (
+        {customer.profileImage ? (
+          <Image
+            source={{ 
+              uri: customer.profileImage,
+              headers: {
+                'Cache-Control': 'public',
+                'Pragma': 'public'
+              }
+            }}
+            className="w-10 h-10 rounded-full"
+            onError={(error) => {
+              console.error('Image loading error:', error);
+              // If image fails to load, fallback to initials
+              setFlatCustomers(prev => 
+                prev.map(c => 
+                  c.id === customer.id 
+                    ? { ...c, profileImage: undefined }
+                    : c
+                )
+              );
+              setGroupedCustomers(prev => {
+                const newGroups = { ...prev };
+                Object.keys(newGroups).forEach(letter => {
+                  newGroups[letter] = newGroups[letter].map(c =>
+                    c.id === customer.id
+                      ? { ...c, profileImage: undefined }
+                      : c
+                  );
+                });
+                return newGroups;
+              });
+            }}
+            defaultSource={require('@/assets/images/favicon.png')}
+          />
+        ) : (
+          <View className="w-10 h-10 bg-color1 rounded-full items-center justify-center">
             <Text className="text-white font-bold text-xs">
               {getInitials(customer.name)}
             </Text>
-          )}
-        </View>
+          </View>
+        )}
         <View>
           <Text className="font-bold text-sm">{customer.name}</Text>
           <View className="flex-row gap-1 items-center mt-1">

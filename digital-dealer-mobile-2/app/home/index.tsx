@@ -8,6 +8,7 @@ import {
   RefreshControl,
   Modal,
   Alert,
+  Image,
 } from 'react-native'
 import axios from 'axios'
 import AsyncStorage from '@react-native-async-storage/async-storage'
@@ -30,6 +31,7 @@ interface CustomerScan {
     name: string
     email: string | null
     phone: string | null
+    profile_image_url: string | null
   }
   dealership_id: number
   dealership_brand_id: number
@@ -187,6 +189,8 @@ const HomeScreen = () => {
         },
       })
 
+      console.log('Scans response:', JSON.stringify(response.data, null, 2));
+
       setScans(response.data)
     } catch (error) {
       console.error('Error fetching scans:', error)
@@ -328,11 +332,42 @@ const HomeScreen = () => {
                 <View className="p-4">
                   <View className="flex-row justify-between items-center">
                     <View className="flex-row gap-2 items-center">
-                      <View className="w-10 h-10 bg-indigo-500 rounded-full flex items-center justify-center">
-                        <Text className="text-white font-bold text-sm">
-                          {getInitials(scan.customer.name)}
-                        </Text>
-                      </View>
+                      {scan.customer.profile_image_url ? (
+                        <Image
+                          source={{ 
+                            uri: scan.customer.profile_image_url,
+                            headers: {
+                              'Cache-Control': 'public',
+                              'Pragma': 'public'
+                            }
+                          }}
+                          className="w-10 h-10 rounded-full"
+                          onError={(error) => {
+                            console.error('Image loading error:', error?.nativeEvent?.error || 'Unknown error');
+                            // Update the scan object to remove the failed image URL
+                            setScans(prevScans => 
+                              prevScans.map(s => 
+                                s.id === scan.id 
+                                  ? { 
+                                      ...s, 
+                                      customer: { 
+                                        ...s.customer, 
+                                        profile_image_url: null 
+                                      } 
+                                    }
+                                  : s
+                              )
+                            );
+                          }}
+                          defaultSource={require('@/assets/images/favicon.png')}
+                        />
+                      ) : (
+                        <View className="w-10 h-10 bg-color1 rounded-full items-center justify-center">
+                          <Text className="text-white font-bold text-sm">
+                            {getInitials(scan.customer.name)}
+                          </Text>
+                        </View>
+                      )}
                       <View>
                         <Text className="font-bold text-sm">
                           {scan.customer.name || 'Unknown Customer'}

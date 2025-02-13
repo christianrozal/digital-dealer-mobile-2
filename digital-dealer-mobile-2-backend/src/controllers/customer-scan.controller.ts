@@ -25,7 +25,8 @@ export const getCustomerScansByUser = async (
           select: {
             name: true,
             email: true,
-            phone: true
+            phone: true,
+            profile_image_url: true
           }
         }
       },
@@ -95,6 +96,7 @@ export const getUniqueCustomers = async (
         name: true,
         email: true,
         phone: true,
+        profile_image_url: true,
         customerScans: {
           where: {
             user_id: userId,
@@ -138,6 +140,7 @@ export const getUniqueCustomers = async (
         name: customer.name,
         email: customer.email,
         phone: customer.phone,
+        profileImage: customer.profile_image_url,
         lastScanned: latestScan?.created_at,
         lastScanId: latestScan?.id.toString(),
         scanCount: customer._count.customerScans,

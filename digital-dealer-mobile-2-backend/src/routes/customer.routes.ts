@@ -1,9 +1,10 @@
-import { RequestHandler, Router } from 'express'
-import { updateCustomer } from '../controllers/customer.controller'
-import { authMiddleware } from '../middleware/auth.middleware'
+import { Router, RequestHandler } from 'express'
+import { updateCustomer, getSignedUploadUrl } from '../controllers/customer.controller'
+import { authenticateToken } from '../middleware/auth'
 
 const router = Router()
 
-router.patch('/:id', authMiddleware as RequestHandler, updateCustomer as RequestHandler)
+router.patch('/:customerId', authenticateToken as RequestHandler, updateCustomer as RequestHandler)
+router.get('/:customerId/upload-url', authenticateToken as RequestHandler, getSignedUploadUrl as RequestHandler)
 
 export default router 
