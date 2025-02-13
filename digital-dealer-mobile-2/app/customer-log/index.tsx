@@ -21,6 +21,7 @@ interface CustomerScan {
         name: string;
         email: string | null;
         phone: string | null;
+        profile_image_url: string | null;
     };
     interest_status: string;
     interested_in: string | null;
@@ -608,11 +609,36 @@ const CustomerLogScreen = () => {
                 <View>
                     {/* Customer Info */}
                     <View className="bg-gray-400 rounded-md px-5 py-7 mt-10 flex-row gap-5">
-                        <View className="bg-color1 rounded-full items-center justify-center" style={{ width: 56, height: 56 }}>
-                            <Text className="text-white font-bold text-sm">
-                                {generateInitials(customerScan.customer.name)}
-                            </Text>
-                        </View>
+                        {customerScan.customer.profile_image_url ? (
+                            <Image
+                                source={{ 
+                                    uri: customerScan.customer.profile_image_url,
+                                    headers: {
+                                        'Cache-Control': 'public',
+                                        'Pragma': 'public'
+                                    }
+                                }}
+                                className="w-[56px] h-[56px] rounded-full"
+                                onError={(error) => {
+                                    console.error('Image loading error:', error);
+                                    // If image fails to load, fallback to initials
+                                    setCustomerScan(prev => ({
+                                        ...prev!,
+                                        customer: {
+                                            ...prev!.customer,
+                                            profile_image_url: null
+                                        }
+                                    }));
+                                }}
+                                defaultSource={require('@/assets/images/favicon.png')}
+                            />
+                        ) : (
+                            <View className="bg-color1 rounded-full items-center justify-center" style={{ width: 56, height: 56 }}>
+                                <Text className="text-white font-bold text-sm">
+                                    {generateInitials(customerScan.customer.name)}
+                                </Text>
+                            </View>
+                        )}
                         <View className="gap-1">
                             <Text className="text-white text-[10px]">
                                 Customer Name: <Text className="font-bold">{customerScan.customer.name || 'No name'}</Text>
