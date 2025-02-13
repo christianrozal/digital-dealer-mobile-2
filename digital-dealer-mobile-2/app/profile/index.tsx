@@ -1,10 +1,10 @@
 import { View, Text, TouchableOpacity, Image } from "react-native";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import EmailIcon from "@/components/svg/emailIcon";
 import PhoneIcon from "@/components/svg/phoneIcon";
 import WebsiteIcon from "@/components/svg/websiteIcon";
 import BackArrowIcon from "@/components/svg/backArrow";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import AlexiumLogo2 from "@/components/svg/alexiumLogo2";
 import EditIcon from "@/components/svg/editIcon";
 import { API_URL } from "@/constants";
@@ -16,10 +16,6 @@ const ProfileScreen = () => {
     const [userData, setUserData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [token, setToken] = useState<string | null>(null);
-
-    useEffect(() => {
-        loadToken();
-    }, []);
 
     const loadToken = async () => {
         try {
@@ -48,13 +44,20 @@ const ProfileScreen = () => {
         }
     };
 
+    useFocusEffect(
+        useCallback(() => {
+            loadToken();
+        }, [])
+    );
+
     const getInitials = (name: string | undefined): string => {
         if (!name) return "CU";
-        const firstName = name.trim().split(" ")[0] || "";
-        if (!firstName) return "CU"
-        const firstLetter = firstName[0]?.toUpperCase() || "";
-        const secondLetter = firstName[1]?.toLowerCase() || "";
-        return `${firstLetter}${secondLetter}`
+        const nameParts = name.trim().split(" ");
+        const firstName = nameParts[0] || "";
+        const lastName = nameParts[nameParts.length - 1] || "";
+        const firstInitial = firstName[0]?.toUpperCase() || "";
+        const lastInitial = lastName[0]?.toUpperCase() || "";
+        return firstInitial + lastInitial || "CU";
     };
 
     if (loading) {
@@ -159,7 +162,7 @@ const ProfileScreen = () => {
                     <View className="px-4">
                         <TouchableOpacity 
                             className="flex-row items-center gap-1 ml-auto p-2 z-10 mt-5" 
-                            onPress={() => router.push("/profile/edit/index")}
+                            onPress={() => router.push("/profile/edit")}
                         >
                             <EditIcon /><Text className="text-xs text-gray-300">Edit...</Text>
                         </TouchableOpacity>

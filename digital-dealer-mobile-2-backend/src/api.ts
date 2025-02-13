@@ -7,6 +7,7 @@ import customerScanRoutes from './routes/customer-scan.routes';
 import customerRoutes from './routes/customer.routes';
 import commentRoutes from './routes/comment.routes';
 import customerLogRoutes from './routes/customer-log.routes';
+import userRoutes from './routes/user.routes';
 
 interface AuthenticatedRequest extends Request {
   user?: {
@@ -53,6 +54,7 @@ app.use('/api/customer-scans', customerScanRoutes);
 app.use('/api/customer', customerRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/customer-logs', customerLogRoutes);
+app.use('/api/users', userRoutes);
 
 // Get current user
 app.get('/api/users/me', authMiddleware as any, async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {

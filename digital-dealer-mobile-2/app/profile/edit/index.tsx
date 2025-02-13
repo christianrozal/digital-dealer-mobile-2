@@ -31,7 +31,6 @@ const EditProfileScreen = () => {
         role_id: undefined,
         role: undefined
     });
-    const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [token, setToken] = useState<string | null>(null);
 
@@ -61,8 +60,6 @@ const EditProfileScreen = () => {
             setUserData(response.data);
         } catch (error) {
             console.error('Error fetching user profile:', error);
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -78,29 +75,41 @@ const EditProfileScreen = () => {
             });
 
             if (!result.canceled) {
-                // Get the file extension
-                const uri = result.assets[0].uri;
-                const fileExtension = uri.split('.').pop();
-                const fileType = `image/${fileExtension}`;
+                const selectedAsset = result.assets[0];
+                const fileType = selectedAsset.uri.split('.').pop()?.toLowerCase();
+                const contentType = fileType === 'png' ? 'image/png' : 
+                                  fileType === 'jpg' || fileType === 'jpeg' ? 'image/jpeg' : 
+                                  'image/jpeg'; // default to jpeg
 
-                // Get signed URL for upload
-                const urlResponse = await axios.get(`${API_URL}/users/profile/upload-url`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                    params: { fileType }
-                });
-
-                const { signedUrl, imageUrl } = urlResponse.data;
+                // Get signed URL for upload - using the user-specific endpoint
+                const { data: { signedUrl, imageUrl } } = await axios.get(
+                    `${API_URL}/api/users/profile/upload-url`,
+                    {
+                        headers: { Authorization: `Bearer ${token}` },
+                        params: { fileType: contentType }
+                    }
+                );
 
                 // Upload image to S3
-                const response = await fetch(uri);
+                const response = await fetch(selectedAsset.uri);
                 const blob = await response.blob();
-                await fetch(signedUrl, {
+                const uploadResponse = await fetch(signedUrl, {
                     method: 'PUT',
                     body: blob,
                     headers: {
-                        'Content-Type': fileType
+                        'Content-Type': contentType
                     }
                 });
+
+                if (!uploadResponse.ok) {
+                    const errorText = await uploadResponse.text();
+                    console.error('Upload failed:', {
+                        status: uploadResponse.status,
+                        statusText: uploadResponse.statusText,
+                        error: errorText
+                    });
+                    throw new Error(`Upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`);
+                }
 
                 // Update local state with new image URL
                 setUserData(prev => ({
@@ -119,7 +128,7 @@ const EditProfileScreen = () => {
         try {
             setSaving(true);
             await axios.put(
-                `${API_URL}/users/profile`,
+                `${API_URL}/api/users/profile`,
                 {
                     name: userData.name,
                     phone: userData.phone,
@@ -140,27 +149,14 @@ const EditProfileScreen = () => {
     };
 
     const getInitials = (name: string): string => {
-        if (!name) return "CU";
-        const nameParts = name.split(' ');
+        if (!name) return "LD";
+        const nameParts = name.trim().split(' ');
         const firstName = nameParts[0] || "";
-        const lastName = nameParts[1] || "";
-        
-        if (!firstName) return "CU";
-        
-        if (lastName) {
-            return `${firstName[0].toUpperCase()}${lastName[0].toUpperCase()}`;
-        }
-        
-        return `${firstName[0].toUpperCase()}${firstName[1]?.toUpperCase() || 'U'}`;
+        const lastName = nameParts[nameParts.length - 1] || "";
+        const firstInitial = firstName[0]?.toUpperCase() || "";
+        const lastInitial = lastName[0]?.toUpperCase() || "";
+        return firstInitial + lastInitial || "LD";
     };
-
-    if (loading) {
-        return (
-            <View className="flex-1 justify-center items-center">
-                <Text>Loading...</Text>
-            </View>
-        );
-    }
 
     return (
         <View className="pt-7 px-7 pb-7 h-full justify-between gap-5">
