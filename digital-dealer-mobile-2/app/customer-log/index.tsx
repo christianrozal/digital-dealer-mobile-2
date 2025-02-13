@@ -59,7 +59,7 @@ const CustomerLogSkeleton = () => {
                 <TouchableOpacity onPress={() => router.back()}>
                     <BackArrowIcon />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => router.push("/home")}>
+                <TouchableOpacity onPress={() => router.replace("/home")}>
                     <AlexiumLogo2 width={64 * 1.3} height={14 * 1.3} />
                 </TouchableOpacity>
                 <View style={{ width: 18 }} />
@@ -259,7 +259,7 @@ const CustomerLogSkeleton = () => {
                 {/* Back to activities button*/}
                 <ButtonComponent 
                     label="Back to Activities" 
-                    onPress={() => router.push("/home")} 
+                    onPress={() => router.replace("/home")} 
                     className="mt-5 mb-20"
                     var2
                 />
@@ -599,7 +599,7 @@ const CustomerLogScreen = () => {
                     <TouchableOpacity onPress={() => router.back()}>
                         <BackArrowIcon />
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => router.push("/home")}>
+                    <TouchableOpacity onPress={() => router.replace("/home")}>
                         <AlexiumLogo2 width={64 * 1.3} height={14 * 1.3} />
                     </TouchableOpacity>
                     <View style={{ width: 18 }} />
@@ -1125,7 +1125,7 @@ const CustomerLogScreen = () => {
                     {/* Back to activities button*/}
                     <ButtonComponent 
                         label="Back to Activities" 
-                        onPress={() => router.push("/home")} 
+                        onPress={() => router.replace("/home")} 
                         className="mt-5 mb-20"
                         var2
                     />

@@ -312,9 +312,6 @@ const EditCustomerScreen = () => {
             <View className="absolute bottom-0 right-1">
               <CameraIcon width={20} height={20} />
             </View>
-            {uploadingImage && (
-              <Text className="text-center mt-2 text-gray-500">Uploading...</Text>
-            )}
           </TouchableOpacity>
           <View className='gap-3 mt-10'>
             <TextInput

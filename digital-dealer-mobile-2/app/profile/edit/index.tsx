@@ -212,12 +212,6 @@ const EditProfileScreen = () => {
                         />
                         <TextInput
                             className="py-3 px-3 flex-row bg-color3 items-center gap-3 rounded-md text-gray-500 text-sm focus:outline-color1"
-                            placeholder="Email Address"
-                            value={userData.email}
-                            editable={false}
-                        />
-                        <TextInput
-                            className="py-3 px-3 flex-row bg-color3 items-center gap-3 rounded-md text-gray-500 text-sm focus:outline-color1"
                             placeholder="Phone Number"
                             value={userData.phone}
                             onChangeText={(text) => setUserData(prev => ({ ...prev, phone: text }))}
