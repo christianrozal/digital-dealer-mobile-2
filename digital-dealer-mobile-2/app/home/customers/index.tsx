@@ -321,11 +321,34 @@ const CustomersScreen = () => {
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery]);
 
-  // Initial fetch
+  // Save filters when they change and fetch scans
   useEffect(() => {
-    setIsLoading(true);
-    fetchCustomers(1);
-  }, []);
+    const saveFilters = async () => {
+      try {
+        await AsyncStorage.setItem('customerFilters', JSON.stringify(filters))
+        setCurrentPage(1) // Reset to first page when filters change
+        fetchCustomers(1, false) // Fetch with new filters
+      } catch (error) {
+        console.error('Error saving filters:', error)
+      }
+    }
+    saveFilters()
+  }, [filters])
+
+  // Load saved filters on mount
+  useEffect(() => {
+    const loadSavedFilters = async () => {
+      try {
+        const savedFilters = await AsyncStorage.getItem('customerFilters')
+        if (savedFilters) {
+          setFilters(JSON.parse(savedFilters))
+        }
+      } catch (error) {
+        console.error('Error loading filters:', error)
+      }
+    }
+    loadSavedFilters()
+  }, [])
 
   // ─── FOCUS THE SEARCH INPUT WHEN NEEDED ───────────────────────────────
   useEffect(() => {
@@ -501,11 +524,8 @@ const CustomersScreen = () => {
                 }}
                 onResetFilters={() => {
                   setFilters(DEFAULT_FILTERS)
-                  setIsFilterVisible(false)
-                  fetchCustomers(1, false)
                 }}
                 onClose={() => {
-                  fetchCustomers(1, false)
                   setIsFilterVisible(false)
                 }}
                 variant="customers"

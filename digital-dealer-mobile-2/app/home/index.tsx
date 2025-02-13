@@ -570,10 +570,8 @@ const HomeScreen = () => {
                 }}
                 onResetFilters={() => {
                   setFilters(DEFAULT_FILTERS)
-                  fetchScans() // Fetch when resetting filters
                 }}
                 onClose={() => {
-                  fetchScans() // Fetch when applying filters
                   setIsFilterVisible(false)
                 }}
               />
