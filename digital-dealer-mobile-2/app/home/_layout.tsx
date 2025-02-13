@@ -100,14 +100,20 @@ const HomeLayout = () => {
 
                     {/* Header Icons */}
                     <View style={{ flexDirection: 'row', alignItems: 'center', transform: [{ translateX: 4 }] }}>
-                        <TouchableOpacity className="justify-center items-center h-[60px] pl-5 pr-1" onPress={() => router.push("/home/analytics")}>
+                        <TouchableOpacity 
+                            className="justify-center items-center h-[60px] pl-5 pr-1" 
+                            onPress={() => router.replace("/home/analytics")}
+                        >
                             <AnalyticsIcon
                                 width={24}
                                 height={24}
                                 stroke={pathname === "/home/analytics" ? "#3D12FA" : "#9EA5AD"}
                             />
                         </TouchableOpacity>
-                        <TouchableOpacity className="justify-center items-center h-[60px] px-1" onPress={() => router.push("/home/notifications")}>
+                        <TouchableOpacity 
+                            className="justify-center items-center h-[60px] px-1" 
+                            onPress={() => router.replace("/home/notifications")}
+                        >
                             <NotificationsIcon
                                 width={27}
                                 height={27}
@@ -146,48 +152,55 @@ const HomeLayout = () => {
 
                 {/* Bottom Navigation */}
                 <View className="absolute bottom-0 left-0 right-0 h-[70px] flex-row justify-center items-center bg-white border-t border-gray-100 z-10">
-                    <TouchableOpacity className="justify-center items-center h-[70px] px-5"
-                style={{ alignItems: 'center' }}
-                        onPress={() => router.push("/home")}
+                    <TouchableOpacity 
+                        className="justify-center items-center h-[70px] px-5"
+                        style={{ alignItems: 'center' }}
+                        onPress={() => router.replace("/home")}
                     >
                         <ActivityIcon
                             stroke={pathname === "/home" ? "#3D12FA" : "#BECAD6"}
                         />
-                <Text style={{ 
-                    fontSize: 10,
-                    color: '#6b7280',
-                    fontWeight: '600',
-                    marginTop: 4
-                }}>
+                        <Text style={{ 
+                            fontSize: 10,
+                            color: '#6b7280',
+                            fontWeight: '600',
+                            marginTop: 4
+                        }}>
                             Activity
                         </Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity className="justify-center items-center h-[70px] px-5" onPress={() => router.push("/qr-scanner")}>
+                    <TouchableOpacity 
+                        className="justify-center items-center h-[70px] px-5" 
+                        onPress={() => router.replace("/qr-scanner")}
+                    >
                         <ScannerIcon
                             fgColor={pathname === "/home/qr-scanner" ? "#3D12FA" : "#BECAD6"}
                         />
                     </TouchableOpacity>
 
-                    <TouchableOpacity className="justify-center items-center h-[70px] px-5"
-                style={{ alignItems: 'center' }}
-                        onPress={() => router.push("/home/customers")}
+                    <TouchableOpacity 
+                        className="justify-center items-center h-[70px] px-5"
+                        style={{ alignItems: 'center' }}
+                        onPress={() => router.replace("/home/customers")}
                     >
                         <CustomersIcon
                             stroke={pathname === "/home/customers" ? "#3D12FA" : "#BECAD6"}
                         />
-                <Text style={{ 
-                    fontSize: 10,
-                    color: '#6b7280',
-                    fontWeight: '600',
-                    marginTop: 4
-                }}>
+                        <Text style={{ 
+                            fontSize: 10,
+                            color: '#6b7280',
+                            fontWeight: '600',
+                            marginTop: 4
+                        }}>
                             Customers
                         </Text>
                     </TouchableOpacity>
                 </View>
+
+                {/* Main Content Area */}
                 <Slot />
-        </>
+            </>
             ) : (
                 <Slot />
             )}

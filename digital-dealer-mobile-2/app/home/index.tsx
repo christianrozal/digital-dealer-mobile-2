@@ -189,8 +189,6 @@ const HomeScreen = () => {
         },
       })
 
-      console.log('Scans response:', JSON.stringify(response.data, null, 2));
-
       setScans(response.data)
     } catch (error) {
       console.error('Error fetching scans:', error)
@@ -322,7 +320,7 @@ const HomeScreen = () => {
                   try {
                     await AsyncStorage.setItem('selectedCustomerId', scan.customer_id.toString())
                     await AsyncStorage.setItem('selectedScanId', scan.id.toString())
-                    router.push('/customer-details')
+                    router.replace('/customer-details')
                   } catch (error) {
                     console.error('Error storing customer data:', error)
                     Alert.alert('Error', 'Failed to load customer details')

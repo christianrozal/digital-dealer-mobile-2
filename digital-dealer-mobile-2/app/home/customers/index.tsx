@@ -338,7 +338,7 @@ const CustomersScreen = () => {
       {/* Floating Add Button */}
       <TouchableOpacity 
         className="absolute bottom-20 right-5 z-10" 
-        onPress={() => router.push("/add-customer")}
+        onPress={() => router.replace("/add-customer")}
       >
         <AddIcon />
       </TouchableOpacity>
@@ -492,7 +492,7 @@ const CustomerCard = ({ customer, getInitials, formatDate, setFlatCustomers, set
         try {
           await AsyncStorage.setItem('selectedCustomerId', customer.id.toString());
           await AsyncStorage.setItem('selectedScanId', customer.lastScanId?.toString() || '');
-          router.push("/customer-details");
+          router.replace("/customer-details");
         } catch (error) {
           console.error('Error storing customer data:', error);
           Alert.alert('Error', 'Failed to load customer details');

@@ -333,7 +333,7 @@ const SidepaneComponent = ({ onClose, userData }: SidepaneProps) => {
                         className="items-center py-3 px-5 flex-row gap-2"
                         onPress={() => {
                             onClose();
-                            router.push("/profile");
+                            router.replace("/profile");
                         }}
                     >
                         <ProfileIcon stroke="#4b5563" />
