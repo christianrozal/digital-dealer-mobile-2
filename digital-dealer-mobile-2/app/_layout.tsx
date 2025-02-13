@@ -43,25 +43,26 @@ export default function RootLayout() {
             <Stack.Screen name="index" />
             <Stack.Screen name="login/index" />
             <Stack.Screen name="dealerships/index" />
-            <Stack.Screen name="home" />
-            <Stack.Screen name="customer-details/edit/index"
-              options={{
-                animation: 'slide_from_right',
-                animationDuration: 200,
-              }} />
-            <Stack.Screen 
-              name="customer-details/index" 
+            <Stack.Screen name="home" options={{
+              animation: 'simple_push',
+              animationDuration: 200,
+            }} />
+            <Stack.Screen name="customer-details/index"
               options={{
                 animation: 'simple_push',
                 animationDuration: 200,
-              }}
-            />
+              }} />
             <Stack.Screen name="customer-log/index"
               options={{
                 animation: 'slide_from_bottom',
                 animationDuration: 200,
               }}
             />
+            <Stack.Screen name="profile/index" 
+              options={{
+                animation: 'simple_push',
+                animationDuration: 200,
+              }} />
             <Stack.Screen 
               name="qr-scanner/index"
               options={{
