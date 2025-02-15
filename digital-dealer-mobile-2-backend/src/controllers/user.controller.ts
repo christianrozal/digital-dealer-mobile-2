@@ -162,4 +162,50 @@ export const getSignedUploadUrl = async (req: AuthenticatedRequest, res: Respons
         console.error('Error generating signed URL:', error);
         return res.status(500).json({ error: 'Failed to generate upload URL' });
     }
+};
+
+export const getUsersByBrand = async (req: Request, res: Response) => {
+    try {
+        const brandId = parseInt(req.params.brandId);
+
+        if (isNaN(brandId)) {
+            return res.status(400).json({ message: 'Invalid brand ID' });
+        }
+
+        const users = await prisma.user.findMany({
+            where: {
+                dealershipAccess: {
+                    some: {
+                        OR: [
+                            { dealership_brand_id: brandId },
+                            {
+                                dealership: {
+                                    brands: {
+                                        some: {
+                                            id: brandId
+                                        }
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }
+            },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                profile_image_url: true,
+                phone: true
+            },
+            orderBy: {
+                name: 'asc'
+            }
+        });
+
+        return res.json(users);
+    } catch (error) {
+        console.error('Error fetching users by brand:', error);
+        return res.status(500).json({ message: 'Error fetching users' });
+    }
 }; 

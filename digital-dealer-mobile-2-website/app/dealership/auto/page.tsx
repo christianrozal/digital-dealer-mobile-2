@@ -181,6 +181,7 @@ const AutoRecognitionPage = () => {
           <Button
             onPress={async () => {
               try {
+                console.log('Creating dealership scan for customer:', customerData);
                 const scanResponse = await fetch(`${API_URL}/api/dealership-scans`, {
                   method: 'POST',
                   headers: {
@@ -196,7 +197,65 @@ const AutoRecognitionPage = () => {
                 });
 
                 if (!scanResponse.ok) {
+                  console.error('Scan creation failed:', await scanResponse.text());
                   throw new Error('Failed to create scan');
+                }
+
+                const scanData = await scanResponse.json();
+                console.log('Scan created successfully:', JSON.stringify(scanData, null, 2));
+
+                // Get the QR code details to find the latest user who scanned this customer
+                console.log('Fetching latest scans for customer:', customerData?.id);
+                const latestScanResponse = await fetch(`${API_URL}/api/customer-scans/logs/${customerData?.id}`, {
+                  method: 'GET',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  }
+                });
+
+                if (latestScanResponse.ok) {
+                  const scans = await latestScanResponse.json();
+                  console.log('Latest scans:', scans);
+                  
+                  if (scans && scans.length > 0) {
+                    const latestScan = scans[0]; // Get the most recent scan
+                    console.log('Latest scan found:', latestScan);
+                    
+                    // Create notification for the consultant
+                    const notificationData = {
+                      type: 'CUSTOMER_CHECK_IN',
+                      userId: latestScan.user_id,
+                      dealershipId: latestScan.dealership_id,
+                      dealershipBrandId: latestScan.dealership_brand_id,
+                      dealershipDepartmentId: latestScan.dealership_department_id,
+                      metadata: {
+                        customerName: customerData?.name,
+                        customerProfileImage: customerData?.profile_image_url,
+                        entityName: entityName // Use the entityName we already have from state
+                      }
+                    };
+                    
+                    console.log('Creating notification with data:', notificationData);
+                    const notificationResponse = await fetch(`${API_URL}/api/notifications`, {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify(notificationData)
+                    });
+
+                    if (!notificationResponse.ok) {
+                      const errorData = await notificationResponse.json();
+                      console.error('Failed to create notification:', errorData);
+                    } else {
+                      const notificationResult = await notificationResponse.json();
+                      console.log('Notification created successfully:', notificationResult);
+                    }
+                  } else {
+                    console.log('No scans found for customer');
+                  }
+                } else {
+                  console.error('Failed to fetch latest scans:', await latestScanResponse.text());
                 }
 
                 router.push(`/landing/${customerData?.slug}`);

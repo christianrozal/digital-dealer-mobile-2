@@ -11,6 +11,6 @@ router.get('/', authenticateToken, getNotifications);
 router.put('/mark-all-read', authenticateToken, markAllAsRead);
 
 // Create a new notification
-router.post('/', authenticateToken, createNotification);
+router.post('/', createNotification);
 
 export default router; 

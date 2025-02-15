@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { handleError } from '../utils/error';
+import { emitNewNotification } from '../websocket';
 
 const prisma = new PrismaClient();
 
@@ -70,39 +71,25 @@ export const markAllAsRead = async (req: Request, res: Response) => {
 
 export const createNotification = async (req: Request, res: Response) => {
   try {
-    const { type, userId, dealershipId, dealershipBrandId, dealershipDepartmentId } = req.body;
-
-    if (!type || !userId) {
-      res.status(400).json({ error: 'Type and user ID are required' });
-      return;
-    }
-
     const notification = await prisma.notification.create({
       data: {
-        type,
-        user_id: userId,
-        dealership_id: dealershipId,
-        dealership_brand_id: dealershipBrandId,
-        dealership_department_id: dealershipDepartmentId,
-        read: false,
+        ...req.body,
+        metadata: req.body.metadata || {},
       },
       include: {
         dealership: true,
         dealershipBrand: true,
         dealershipDepartment: true,
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            profile_image_url: true,
-          },
-        },
+        user: true,
       },
     });
 
+    // Emit the new notification event
+    emitNewNotification(notification);
+
     res.status(201).json(notification);
   } catch (error) {
-    handleError(error, res);
+    console.error('Error creating notification:', error);
+    res.status(500).json({ error: 'Failed to create notification' });
   }
 }; 

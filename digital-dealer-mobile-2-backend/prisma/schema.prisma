@@ -211,6 +211,7 @@ model Notification {
   dealership_id            Int?
   dealership_brand_id      Int?
   dealership_department_id Int?
+  metadata                 Json?                 @db.JsonB
   created_at               DateTime              @default(now())
   updated_at               DateTime              @updatedAt
   dealership               Dealership?           @relation(fields: [dealership_id], references: [id])

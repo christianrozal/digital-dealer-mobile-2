@@ -207,29 +207,78 @@ export const getUserDealerships = async (req: AuthenticatedRequest, res: Respons
       select: { role_id: true }
     });
 
-    const findManyArgs = {
-      include: {
-        dealership: true,
-        departments: true
-      },
-      orderBy: { name: 'asc' }
-    } satisfies Parameters<typeof prisma.dealershipBrand.findMany>[0];
-
+    // If user is admin (role_id === 1), they can see all dealerships
     if (user?.role_id === 1) {
-      const allBrands = await prisma.dealershipBrand.findMany(findManyArgs);
+      const allBrands = await prisma.dealershipBrand.findMany({
+        include: {
+          dealership: true,
+          departments: true
+        },
+        orderBy: { name: 'asc' }
+      });
       return res.json(allBrands);
     }
 
-    const dealershipBrands = await prisma.dealershipBrand.findMany(findManyArgs);
+    // For non-admin users, get their dealership access
+    const userAccess = await prisma.userDealershipAccess.findMany({
+      where: { user_id: userId },
+      include: {
+        dealership: true,
+        dealershipBrand: {
+          include: {
+            dealership: true,
+            departments: true
+          }
+        }
+      }
+    });
 
-    if (!dealershipBrands || dealershipBrands.length === 0) {
+    if (!userAccess || userAccess.length === 0) {
       return res.status(404).json({ 
         message: 'No dealership brands found',
         details: 'No dealership brands are accessible to this user'
       });
     }
 
-    return res.json(dealershipBrands);
+    // Get all accessible brands
+    const accessibleBrands = userAccess
+      .filter(access => access.dealershipBrand)
+      .map(access => access.dealershipBrand!);
+
+    // Get all accessible dealerships (when user has dealership-level access)
+    const dealershipAccess = userAccess
+      .filter(access => access.dealership && !access.dealership_brand_id)
+      .map(access => access.dealership!.id);
+
+    if (dealershipAccess.length > 0) {
+      // If user has dealership-level access, get all brands for those dealerships
+      const dealershipBrands = await prisma.dealershipBrand.findMany({
+        where: {
+          dealership_id: {
+            in: dealershipAccess
+          }
+        },
+        include: {
+          dealership: true,
+          departments: true
+        },
+        orderBy: { name: 'asc' }
+      });
+
+      // Combine with directly accessible brands, removing duplicates
+      const allAccessibleBrands = [
+        ...accessibleBrands,
+        ...dealershipBrands
+      ].filter((brand, index, self) => 
+        index === self.findIndex((b) => b.id === brand.id)
+      );
+
+      return res.json(allAccessibleBrands);
+    }
+
+    // If no dealership-level access, return only directly accessible brands
+    return res.json(accessibleBrands);
+
   } catch (error: any) {
     console.error('Error fetching dealerships:', error);
     res.status(500).json({ 
@@ -252,8 +301,93 @@ export const getDealershipDepartments = async (req: AuthenticatedRequest, res: R
       return res.status(400).json({ message: 'Invalid brand ID' });
     }
 
-    const findManyArgs = {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role_id: true }
+    });
+
+    // If user is admin, they can see all departments
+    if (user?.role_id === 1) {
+      const departments = await prisma.dealershipDepartment.findMany({
+        where: {
+          dealership_brand_id: brandId
+        },
+        include: {
+          dealershipBrand: {
+            include: {
+              dealership: true
+            }
+          }
+        },
+        orderBy: { name: 'asc' }
+      });
+      return res.json(departments);
+    }
+
+    // For non-admin users, check their access
+    const userAccess = await prisma.userDealershipAccess.findMany({
+      where: { 
+        user_id: userId,
+        OR: [
+          { dealership_brand_id: brandId },
+          { dealership_department_id: { not: null } },
+          { 
+            dealership_id: { not: null }
+          }
+        ]
+      },
+      include: {
+        dealershipDepartment: true,
+        dealershipBrand: {
+          include: {
+            dealership: true
+          }
+        },
+        dealership: true
+      }
+    });
+
+    if (!userAccess || userAccess.length === 0) {
+      return res.status(404).json({
+        message: 'No departments found',
+        details: 'No departments are accessible to this user'
+      });
+    }
+
+    // Get departments based on different access levels
+    const accessibleDepartmentIds = new Set<number>();
+
+    // Get all accessible departments
+    const departmentsPromises = userAccess.map(async (access) => {
+      // If user has department-level access
+      if (access.dealership_department_id) {
+        accessibleDepartmentIds.add(access.dealership_department_id);
+      }
+      
+      // If user has brand-level access
+      if (access.dealership_brand_id === brandId) {
+        const brandDepartments = await prisma.dealershipDepartment.findMany({
+          where: { dealership_brand_id: brandId }
+        });
+        brandDepartments.forEach(dept => accessibleDepartmentIds.add(dept.id));
+      }
+      
+      // If user has dealership-level access and the brand belongs to their dealership
+      if (access.dealership_id && access.dealershipBrand?.dealership_id === access.dealership_id) {
+        const dealershipDepartments = await prisma.dealershipDepartment.findMany({
+          where: { dealership_brand_id: brandId }
+        });
+        dealershipDepartments.forEach(dept => accessibleDepartmentIds.add(dept.id));
+      }
+    });
+
+    // Wait for all department queries to complete
+    await Promise.all(departmentsPromises);
+
+    // Fetch the actual department data for accessible departments
+    const departments = await prisma.dealershipDepartment.findMany({
       where: {
+        id: { in: Array.from(accessibleDepartmentIds) },
         dealership_brand_id: brandId
       },
       include: {
@@ -264,14 +398,12 @@ export const getDealershipDepartments = async (req: AuthenticatedRequest, res: R
         }
       },
       orderBy: { name: 'asc' }
-    } satisfies Parameters<typeof prisma.dealershipDepartment.findMany>[0];
-
-    const departments = await prisma.dealershipDepartment.findMany(findManyArgs);
+    });
 
     if (!departments || departments.length === 0) {
       return res.status(404).json({
         message: 'No departments found',
-        details: `No departments found for brand ID ${brandId}`
+        details: `No accessible departments found for brand ID ${brandId}`
       });
     }
 

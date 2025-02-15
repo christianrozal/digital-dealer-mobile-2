@@ -6,7 +6,6 @@ import relativeTime from "dayjs/plugin/relativeTime";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { API_URL } from '@/constants';
-import CloseIcon from "@/components/svg/closeIcon";
 
 dayjs.extend(relativeTime);
 
@@ -20,6 +19,12 @@ interface Notification {
   dealership_department_id?: number;
   created_at: Date;
   updated_at: Date;
+  metadata?: {
+    customerName: string;
+    newUserName: string;
+    customerProfileImage?: string;
+    entityName: string;
+  };
   dealership?: {
     id: number;
     name: string;
@@ -79,9 +84,16 @@ const NotificationsScreen = () => {
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     loadUserAndNotifications();
+
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+    };
   }, []);
 
   const onRefresh = React.useCallback(async () => {
@@ -96,15 +108,43 @@ const NotificationsScreen = () => {
     }
   }, [userId]);
 
+  const setupWebSocket = (currentUserId: number) => {
+    if (wsRef.current) {
+      wsRef.current.close();
+    }
+
+    const ws = new WebSocket(`${API_URL.replace('http://', 'ws://').replace('https://', 'wss://')}/websocket`);
+    
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === 'notification' && data.userId === currentUserId) {
+        // Fetch new notifications when a real-time update is received
+        fetchNotifications(currentUserId);
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+
+    ws.onclose = () => {
+      // Attempt to reconnect after a delay
+      setTimeout(() => setupWebSocket(currentUserId), 3000);
+    };
+
+    wsRef.current = ws;
+  };
+
   const loadUserAndNotifications = async () => {
     try {
-      const storedUserId = await AsyncStorage.getItem('userId');
-      console.log('Stored userId:', storedUserId);
-      if (storedUserId) {
-        setUserId(parseInt(storedUserId));
-        await fetchNotifications(parseInt(storedUserId));
+      const userData = await AsyncStorage.getItem('userData');
+      if (userData) {
+        const user = JSON.parse(userData);
+        setUserId(user.id);
+        await fetchNotifications(user.id);
+        setupWebSocket(user.id);
       } else {
-        console.log('No userId found in AsyncStorage');
+        console.log('No user data found in AsyncStorage');
         setLoading(false);
       }
     } catch (error) {
@@ -116,9 +156,21 @@ const NotificationsScreen = () => {
   const fetchNotifications = async (currentUserId: number) => {
     try {
       setLoading(true);
+      const token = await AsyncStorage.getItem('userToken');
+      
+      if (!token) {
+        router.replace('/login');
+        return;
+      }
+
       console.log('Fetching notifications for userId:', currentUserId);
-      console.log('API URL:', `${API_URL}/notifications?userId=${currentUserId}`);
-      const response = await axios.get(`${API_URL}/notifications?userId=${currentUserId}`);
+      console.log('API URL:', `${API_URL}/api/notifications?userId=${currentUserId}`);
+      const response = await axios.get(`${API_URL}/api/notifications?userId=${currentUserId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+        }
+      });
       console.log('Notifications response:', response.data);
       setNotifications(response.data);
     } catch (error) {
@@ -132,7 +184,22 @@ const NotificationsScreen = () => {
     if (!userId) return;
     
     try {
-      await axios.put(`${API_URL}/notifications/mark-all-read`, { userId });
+      const token = await AsyncStorage.getItem('userToken');
+      
+      if (!token) {
+        router.replace('/login');
+        return;
+      }
+
+      await axios.put(`${API_URL}/api/notifications/mark-all-read`, 
+        { userId },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+          }
+        }
+      );
       await fetchNotifications(userId);
     } catch (error) {
       console.error('Error marking notifications as read:', error);
@@ -160,8 +227,14 @@ const NotificationsScreen = () => {
     const entityName = notification.dealership?.name || notification.dealershipBrand?.name || notification.dealershipDepartment?.name || '';
     
     switch (notification.type) {
-      case 'reassigned':
-        return ['Customer from ', entityName, ' has been reassigned to another consultant'];
+      case 'CUSTOMER_REASSIGNMENT':
+        return notification.metadata ? 
+          ['Customer ', notification.metadata.customerName, ' has been reassigned to ', notification.metadata.newUserName] :
+          ['A customer has been reassigned to another consultant'];
+      case 'CUSTOMER_CHECK_IN':
+        return notification.metadata ? 
+          ['Customer ', notification.metadata.customerName, ' checked in at ', notification.metadata.entityName] :
+          ['A customer has checked in'];
       case 'appointment':
         return ['New appointment scheduled in ', entityName];
       case 'customer_scan':
@@ -171,19 +244,11 @@ const NotificationsScreen = () => {
     }
   };
 
-  const getInitials = (name: string) => {
+  const getInitials = (name: string | undefined) => {
     if (!name) return "EN";
     const nameParts = name.split(" ");
-    const firstName = nameParts[0] || "";
-    const lastName = nameParts[1] || "";
-    
-    if (!firstName) return "EN";
-    
-    if (lastName) {
-      return `${firstName[0].toUpperCase()}${lastName[0].toUpperCase()}`;
-    }
-    
-    return `${firstName[0].toUpperCase()}${firstName[1]?.toUpperCase() || 'N'}`;
+    if (nameParts.length < 2) return name.slice(0, 2).toUpperCase();
+    return `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase();
   };
 
   const formatDate = (date: Date | string | null) => {
@@ -205,32 +270,57 @@ const NotificationsScreen = () => {
   };
 
   const renderNotification = (notification: Notification) => {
+    // Get customer name from metadata for initials
+    const customerName = notification.metadata?.customerName;
+    
     return (
       <View 
         key={notification.id}
         className={`p-3 ${notification.read ? 'bg-white' : 'bg-color3'} mt-3 rounded-md flex-row gap-3 items-center`}
       >
-        {notification.dealership?.name || notification.dealershipBrand?.name || notification.dealershipDepartment?.name ? (
-          <View className="w-9 h-9 bg-color1 rounded-full flex items-center justify-center">
-            <Text className="text-white font-bold text-xs">
-              {getInitials(notification.dealership?.name || notification.dealershipBrand?.name || notification.dealershipDepartment?.name)}
-            </Text>
-          </View>
+        {notification.type === 'CUSTOMER_REASSIGNMENT' || notification.type === 'CUSTOMER_CHECK_IN' ? (
+          // For customer-related notifications, use customer's initials/image
+          notification.metadata?.customerProfileImage ? (
+            <Image
+              source={{ uri: notification.metadata.customerProfileImage }}
+              style={{ width: 36, height: 36, borderRadius: 18 }}
+            />
+          ) : notification.metadata?.customerName ? (
+            <View className="w-9 h-9 bg-color1 rounded-full flex items-center justify-center">
+              <Text className="text-white font-bold text-xs">
+                {getInitials(notification.metadata.customerName)}
+              </Text>
+            </View>
+          ) : (
+            <View className="w-9 h-9 bg-color1 rounded-full flex items-center justify-center">
+              <Text className="text-white font-bold text-xs">EN</Text>
+            </View>
+          )
         ) : (
-          <View className="w-9 h-9 bg-color1 rounded-full flex items-center justify-center">
-            <Text className="text-white font-bold text-xs">EN</Text>
-          </View>
+          // For other notifications, use dealership initials
+          notification.dealership?.name || notification.dealershipBrand?.name || notification.dealershipDepartment?.name ? (
+            <View className="w-9 h-9 bg-color1 rounded-full flex items-center justify-center">
+              <Text className="text-white font-bold text-xs">
+                {getInitials(notification.dealership?.name || notification.dealershipBrand?.name || notification.dealershipDepartment?.name)}
+              </Text>
+            </View>
+          ) : (
+            <View className="w-9 h-9 bg-color1 rounded-full flex items-center justify-center">
+              <Text className="text-white font-bold text-xs">EN</Text>
+            </View>
+          )
         )}
         
         <View className="flex-1 gap-1">
           <Text className="text-sm">
             {(() => {
-              const [prefix, name, suffix] = getNotificationMessage(notification);
+              const [prefix, name, suffix, additionalName] = getNotificationMessage(notification);
               return (
                 <>
                   {prefix}
-                  <Text className="font-bold text-color1 text-sm">{name}</Text>
+                  <Text className="font-bold text-color1">{name}</Text>
                   {suffix}
+                  {additionalName && <Text className="font-bold text-color1">{additionalName}</Text>}
                 </>
               );
             })()}

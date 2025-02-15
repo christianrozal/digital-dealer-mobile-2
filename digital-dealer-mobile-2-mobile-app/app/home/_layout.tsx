@@ -27,6 +27,7 @@ const HomeLayout = () => {
     const pathname = usePathname();
     const [userData, setUserData] = useState<UserData | null>(null);
     const [isSidepaneOpen, setIsSidepaneOpen] = useState(false);
+    const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
     const slideAnim = useRef(new Animated.Value(-1000)).current;
 
     const toggleSidepane = () => {
@@ -51,6 +52,90 @@ const HomeLayout = () => {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 setUserData(response.data);
+
+                // Check for unread notifications
+                const notificationsResponse = await axios.get(
+                    `${API_URL}/api/notifications?userId=${response.data.id}`,
+                    { headers: { Authorization: `Bearer ${token}` } }
+                );
+                
+                const hasUnread = notificationsResponse.data.some((notification: any) => !notification.read);
+                setHasUnreadNotifications(hasUnread);
+
+                // Set up WebSocket connection for real-time notifications
+                const wsUrl = API_URL.replace('http://', 'ws://').replace('https://', 'wss://');
+                console.log('Connecting to WebSocket:', `${wsUrl}/websocket`);
+                
+                let ws: WebSocket | null = null;
+                let reconnectAttempts = 0;
+                const maxReconnectAttempts = 5;
+                const reconnectDelay = 3000;
+
+                function connect() {
+                    try {
+                        ws = new WebSocket(`${wsUrl}/websocket`);
+                        
+                        ws.onopen = () => {
+                            console.log('WebSocket connected');
+                            reconnectAttempts = 0;
+                            // Send initialization message with user ID
+                            ws?.send(JSON.stringify({
+                                type: 'init',
+                                userId: response.data.id
+                            }));
+                        };
+                        
+                        ws.onmessage = (event) => {
+                            console.log('WebSocket message received:', event.data);
+                            try {
+                                const data = JSON.parse(event.data);
+                                if (data.type === 'notification' && data.userId === response.data.id) {
+                                    setHasUnreadNotifications(true);
+                                }
+                                if (data.type === 'connected') {
+                                    console.log('Received welcome message from server');
+                                }
+                                if (data.type === 'initialized') {
+                                    console.log('Successfully initialized with server');
+                                }
+                            } catch (error) {
+                                console.error('Error parsing message:', error);
+                            }
+                        };
+
+                        ws.onerror = (error) => {
+                            console.error('WebSocket error:', error);
+                        };
+
+                        ws.onclose = () => {
+                            console.log('WebSocket connection closed');
+                            if (reconnectAttempts < maxReconnectAttempts) {
+                                console.log(`Attempting to reconnect... (${reconnectAttempts + 1}/${maxReconnectAttempts})`);
+                                reconnectAttempts++;
+                                setTimeout(connect, reconnectDelay);
+                            }
+                        };
+                    } catch (error) {
+                        console.error('Error creating WebSocket connection:', error);
+                    }
+                }
+
+                // Initial connection
+                connect();
+
+                // Set up ping interval
+                const pingInterval = setInterval(() => {
+                    if (ws?.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({ type: 'ping' }));
+                    }
+                }, 30000);
+
+                return () => {
+                    clearInterval(pingInterval);
+                    if (ws) {
+                        ws.close();
+                    }
+                };
             } catch (error) {
                 console.error('Error loading user data:', error);
             }
@@ -112,13 +197,23 @@ const HomeLayout = () => {
                         </TouchableOpacity>
                         <TouchableOpacity 
                             className="justify-center items-center h-[60px] px-1" 
-                            onPress={() => router.replace("/home/notifications")}
+                            onPress={() => {
+                                setHasUnreadNotifications(false); // Reset indicator when viewing notifications
+                                router.replace("/home/notifications");
+                            }}
                         >
-                            <NotificationsIcon
-                                width={27}
-                                height={27}
-                                stroke={pathname === "/home/notifications" ? "#3D12FA" : "#9EA5AD"}
-                            />
+                            <View className="relative">
+                                <NotificationsIcon
+                                    width={27}
+                                    height={27}
+                                    stroke={pathname === "/home/notifications" ? "#3D12FA" : "#9EA5AD"}
+                                />
+                                {hasUnreadNotifications && (
+                                    <View 
+                                        className="absolute -top-1 -right-1 w-3 h-3 bg-color1 rounded-full"
+                                    />
+                                )}
+                            </View>
                         </TouchableOpacity>
                     </View>
                 </View>

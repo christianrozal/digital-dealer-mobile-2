@@ -208,4 +208,38 @@ export const getCustomerBySlug: RequestHandler = async (req, res) => {
     console.error('Error fetching customer:', error);
     res.status(500).json({ error: 'Failed to fetch customer' });
   }
+};
+
+export const getCustomerById = async (req: Request, res: Response) => {
+  try {
+    const { customerId } = req.params;
+
+    if (!customerId) {
+      return res.status(400).json({ error: 'Customer ID is required' });
+    }
+
+    const customer = await prisma.customer.findUnique({
+      where: {
+        id: parseInt(customerId)
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        profile_image_url: true,
+        created_at: true,
+        updated_at: true
+      }
+    });
+
+    if (!customer) {
+      return res.status(404).json({ error: 'Customer not found' });
+    }
+
+    res.json(customer);
+  } catch (error) {
+    console.error('Error fetching customer:', error);
+    res.status(500).json({ error: 'Failed to fetch customer' });
+  }
 }; 

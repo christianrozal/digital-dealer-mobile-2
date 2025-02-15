@@ -224,7 +224,7 @@ async function main() {
   for (const { user, customers } of consultants) {
     for (const customer of customers) {
       const interestStatuses = ['Hot', 'Warm', 'Cold'];
-      const interests = ['New Car', 'Used Car', 'Service', 'Parts'];
+      const interests = ['Buying', 'Selling', 'Financing'];
       
       await prisma.customerScan.create({
         data: {

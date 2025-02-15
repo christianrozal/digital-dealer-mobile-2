@@ -153,11 +153,10 @@ const DealershipsScreen = () => {
         const data: DealershipBrand[] = await response.json();
         
         if (data.length === 0) {
-          setError('No dealerships available');
+          setError('No dealerships available for your account');
           return;
         }
 
-        // Store the full brand data for later use
         const brandOptions = data.map(brand => ({
           id: brand.id.toString(),
           label: brand.name,
@@ -175,7 +174,7 @@ const DealershipsScreen = () => {
     fetchDealershipBrands();
   }, []);
 
-  // Updated fetch departments with new schema relations
+  // Updated fetch departments
   useEffect(() => {
     const fetchDepartments = async () => {
       if (!selectedBrand) return;
@@ -202,8 +201,7 @@ const DealershipsScreen = () => {
 
         const data: DealershipDepartment[] = await response.json();
         
-        // If there are no departments or we get a 404, just set an empty array
-        // This is a valid case for brands without departments
+        // If there are no departments, set empty array
         if (!data || response.status === 404) {
           setDepartments([]);
           return;
@@ -217,7 +215,6 @@ const DealershipsScreen = () => {
         setDepartments(departmentOptions);
       } catch (error) {
         console.error('Error:', error);
-        // Don't show error for missing departments, just set empty array
         setDepartments([]);
       } finally {
         setIsLoading(false);

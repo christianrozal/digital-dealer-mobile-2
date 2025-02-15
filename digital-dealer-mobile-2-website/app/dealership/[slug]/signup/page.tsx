@@ -162,7 +162,48 @@ const SignupPage = () => {
         throw new Error('Failed to submit form');
       }
 
+      const scanData = await scanResponse.json();
       console.log(`[${requestId}] Scan created, redirecting...`);
+
+      // Get the QR code details to find the latest user who scanned this customer
+      const latestScanResponse = await fetch(`${API_URL}/api/customer-scans/logs/${customer.id}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (latestScanResponse.ok) {
+        const scans = await latestScanResponse.json();
+        if (scans && scans.length > 0) {
+          const latestScan = scans[0]; // Get the most recent scan
+          
+          // Create notification for the consultant
+          const notificationResponse = await fetch(`${API_URL}/api/notifications`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              type: 'CUSTOMER_CHECK_IN',
+              userId: latestScan.user_id,
+              dealershipId: latestScan.dealership_id,
+              dealershipBrandId: latestScan.dealership_brand_id,
+              dealershipDepartmentId: latestScan.dealership_department_id,
+              metadata: {
+                customerName: customer.name,
+                customerProfileImage: customer.profile_image_url,
+                entityName: scanData.scan.qrCode.dealershipDepartment?.name || scanData.scan.qrCode.dealershipBrand.name
+              }
+            })
+          });
+
+          if (!notificationResponse.ok) {
+            console.error(`[${requestId}] Failed to create notification:`, await notificationResponse.json());
+          }
+        }
+      }
+
       router.push(`/landing/${customer.slug}`);
     } catch (err) {
       console.error(`[${requestId}] Form submission error:`, err);

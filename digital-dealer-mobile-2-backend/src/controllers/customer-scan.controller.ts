@@ -394,4 +394,74 @@ export const updateCustomerScan = async (req: Request, res: Response) => {
     console.error('Error updating customer scan:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
+};
+
+export const createCustomerScan = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const {
+      customer_id,
+      user_id,
+      dealership_brand_id,
+      dealership_department_id,
+      interest_status,
+      interested_in,
+      follow_up_date
+    } = req.body;
+
+    // Validate required fields
+    if (!customer_id || !user_id || !dealership_brand_id) {
+      return res.status(400).json({ 
+        error: 'Missing required fields',
+        details: 'customer_id, user_id, and dealership_brand_id are required'
+      });
+    }
+
+    // Get the dealership_id from the brand
+    const brand = await prisma.dealershipBrand.findUnique({
+      where: { id: dealership_brand_id },
+      select: { dealership_id: true }
+    });
+
+    if (!brand) {
+      return res.status(404).json({
+        error: 'Brand not found',
+        details: `No brand found with ID ${dealership_brand_id}`
+      });
+    }
+
+    // Create the customer scan
+    const customerScan = await prisma.customerScan.create({
+      data: {
+        customer_id: parseInt(customer_id.toString()),
+        user_id: parseInt(user_id.toString()),
+        dealership_id: brand.dealership_id,
+        dealership_brand_id: parseInt(dealership_brand_id.toString()),
+        dealership_department_id: dealership_department_id ? parseInt(dealership_department_id.toString()) : null,
+        interest_status: interest_status || 'hot',
+        interested_in: interested_in || 'buying',
+        follow_up_date: follow_up_date ? new Date(follow_up_date) : null
+      },
+      include: {
+        customer: {
+          select: {
+            name: true,
+            email: true,
+            phone: true,
+            profile_image_url: true
+          }
+        },
+        dealership: true,
+        dealershipBrand: true,
+        dealershipDepartment: true
+      }
+    });
+
+    return res.status(201).json(customerScan);
+  } catch (error) {
+    console.error('Error creating customer scan:', error);
+    return res.status(500).json({ 
+      error: 'Failed to create customer scan',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
 }; 
