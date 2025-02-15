@@ -370,7 +370,7 @@ const NotificationsScreen = () => {
 
   return (
     <ScrollView 
-      className="flex-1 bg-white"
+      className="flex-1 bg-white pt-20"
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -380,7 +380,7 @@ const NotificationsScreen = () => {
         />
       }
     >
-      <View className="px-5 pt-20">
+      <View className="px-5">
         <View className="flex-row justify-between items-center mt-5">
           <Text className="text-2xl font-semibold">Notifications</Text>
         </View>
