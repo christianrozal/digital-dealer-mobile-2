@@ -121,8 +121,8 @@ const EditCustomerScreen = () => {
       }
 
       // Update customer details through the API
-      await axios.put(
-        `${API_URL}/api/customer-scans/details/${customerId}`,
+      await axios.patch(
+        `${API_URL}/api/customer/${customerId}`,
         {
           name: formData.name.trim(),
           email: formData.email.trim() || null,
