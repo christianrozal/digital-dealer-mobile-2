@@ -12,6 +12,24 @@ interface EntityDetails {
   dealershipName: string;
 }
 
+interface DealershipDepartment {
+  slug: string;
+  name: string;
+  dealershipBrand?: {
+    dealership?: {
+      name: string;
+    };
+  };
+}
+
+interface DealershipBrand {
+  slug: string;
+  name: string;
+  dealership?: {
+    name: string;
+  };
+}
+
 const SignupPage = () => {
   const params = useParams();
   const router = useRouter();
@@ -60,9 +78,9 @@ const SignupPage = () => {
     const fetchEntityDetails = async () => {
       try {
         // Try department first
-        let response = await fetch(`${API_URL}/api/dealership-departments`);
-        let departments = await response.json();
-        let department = departments.find((d: any) => d.slug === slug);
+        const response = await fetch(`${API_URL}/api/dealership-departments`);
+        const departments = await response.json();
+        const department = departments.find((d: DealershipDepartment) => d.slug === slug);
 
         if (department) {
           setEntityDetails({
@@ -75,9 +93,9 @@ const SignupPage = () => {
         }
 
         // Try brand if department not found
-        response = await fetch(`${API_URL}/api/dealership-brands`);
-        let brands = await response.json();
-        let brand = brands.find((b: any) => b.slug === slug);
+        const brandResponse = await fetch(`${API_URL}/api/dealership-brands`);
+        const brands = await response.json();
+        const brand = brands.find((b: DealershipBrand) => b.slug === slug);
 
         if (brand) {
           setEntityDetails({
@@ -90,7 +108,7 @@ const SignupPage = () => {
         }
 
         throw new Error('Entity not found');
-      } catch (err) {
+      } catch (error) {
         setError('Invalid QR code or entity not found');
         setPageLoading(false);
       }
@@ -313,7 +331,7 @@ const SignupPage = () => {
                 label: "text-[10px] text-color2",
               }}
             >
-              I agree to Alexium's Privacy Policy and Terms of Use.
+              I agree to Alexium&apos;s Privacy Policy and Terms of Use.
             </Checkbox>
           </div>
           
