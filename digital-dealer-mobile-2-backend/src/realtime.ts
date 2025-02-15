@@ -18,15 +18,20 @@ const prisma = new PrismaClient().$extends(
 );
 
 async function main() {
-  const stream = await prisma.user.stream();
+  // Set up stream for notifications
+  const notificationStream = await prisma.notification.stream();
 
   process.on('exit', () => {
-    stream.stop();
+    notificationStream.stop();
   });
 
-  console.log(`Waiting for an event on the \`User\` table ... `);
-  for await (const event of stream) {
-    console.log('Received an event:', event);
+  console.log(`Pulse stream initialized. Waiting for notification events...`);
+  
+  // Handle notification events
+  for await (const event of notificationStream) {
+    if ('action' in event && event.action === 'create') {
+      console.log('New notification created:', event.record);
+    }
   }
 }
 

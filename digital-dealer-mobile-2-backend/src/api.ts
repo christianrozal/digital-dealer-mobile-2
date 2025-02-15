@@ -11,6 +11,8 @@ import userRoutes from './routes/user.routes';
 import notificationRoutes from './routes/notification.routes';
 import dealershipScanRoutes from './routes/dealership-scan.routes';
 import qrCodeRoutes from './routes/qr-code.routes';
+import { createServer } from 'http';
+import { setupWebSocketServer } from './websocket';
 
 interface AuthenticatedRequest extends Request {
   user?: {
@@ -22,6 +24,7 @@ interface AuthenticatedRequest extends Request {
 
 const prisma = new PrismaClient();
 const app = express();
+const server = createServer(app);
 const port = process.env.PORT || 3000;
 
 // Request logging middleware
@@ -34,7 +37,17 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 app.use(cors({
   origin: '*', // Allow all origins for development
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'Upgrade', 
+    'Connection', 
+    'Sec-WebSocket-Key', 
+    'Sec-WebSocket-Version',
+    'Sec-WebSocket-Extensions',
+    'Sec-WebSocket-Protocol'
+  ],
+  credentials: true
 }));
 
 app.use(express.json());
@@ -151,8 +164,17 @@ app.get('/api/dealership-brands/:brandId/departments', async (req: Request, res:
   }
 });
 
-app.listen(port, () => {
+// Set up WebSocket server without path restriction
+const wss = setupWebSocketServer(server);
+
+// Start the server
+server.listen(port, () => {
   console.log(`Server is running on port ${port}`);
+  console.log('WebSocket server is available at:');
+  console.log(`  ws://localhost:${port}`);
+  console.log(`  ws://127.0.0.1:${port}`);
+  console.log(`  ws://172.16.20.0:${port}`);
+  console.log('Make sure to use the correct IP address for your network');
 });
 
 export default app;

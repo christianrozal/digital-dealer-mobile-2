@@ -89,8 +89,10 @@ const HomeLayout = () => {
                             console.log('WebSocket message received:', event.data);
                             try {
                                 const data = JSON.parse(event.data);
-                                if (data.type === 'notification' && data.userId === response.data.id) {
-                                    setHasUnreadNotifications(true);
+                                if (data.type === 'notification') {
+                                    console.log('Received notification:', data);
+                                    // Check for unread notifications
+                                    checkUnreadNotifications(response.data.id, token);
                                 }
                                 if (data.type === 'connected') {
                                     console.log('Received welcome message from server');
@@ -98,8 +100,27 @@ const HomeLayout = () => {
                                 if (data.type === 'initialized') {
                                     console.log('Successfully initialized with server');
                                 }
+                                if (data.type === 'notifications_updated') {
+                                    console.log('Notifications updated:', data);
+                                    setHasUnreadNotifications(data.hasUnread);
+                                }
                             } catch (error) {
                                 console.error('Error parsing message:', error);
+                            }
+                        };
+
+                        // Function to check for unread notifications
+                        const checkUnreadNotifications = async (userId: number, token: string) => {
+                            try {
+                                const notificationsResponse = await axios.get(
+                                    `${API_URL}/api/notifications?userId=${userId}`,
+                                    { headers: { Authorization: `Bearer ${token}` } }
+                                );
+                                
+                                const hasUnread = notificationsResponse.data.some((notification: any) => !notification.read);
+                                setHasUnreadNotifications(hasUnread);
+                            } catch (error) {
+                                console.error('Error checking unread notifications:', error);
                             }
                         };
 
@@ -210,7 +231,7 @@ const HomeLayout = () => {
                                 />
                                 {hasUnreadNotifications && (
                                     <View 
-                                        className="absolute -top-1 -right-1 w-3 h-3 bg-color1 rounded-full"
+                                        className="absolute top-0.5 right-0.5 w-2.5 h-2.5 bg-color1 rounded-full"
                                     />
                                 )}
                             </View>

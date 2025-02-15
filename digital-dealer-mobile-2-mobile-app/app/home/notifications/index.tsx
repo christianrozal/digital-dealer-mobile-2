@@ -90,11 +90,34 @@ const NotificationsScreen = () => {
     loadUserAndNotifications();
 
     return () => {
+      // Cleanup: Mark all notifications as read when leaving the screen
+      if (userId) {
+        const markNotificationsAsRead = async () => {
+          try {
+            const token = await AsyncStorage.getItem('userToken');
+            if (!token) return;
+            
+            await axios.put(`${API_URL}/api/notifications/mark-all-read`, 
+              { userId },
+              {
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Accept': 'application/json',
+                }
+              }
+            );
+          } catch (error) {
+            console.error('Error marking notifications as read:', error);
+          }
+        };
+        markNotificationsAsRead();
+      }
+
       if (wsRef.current) {
         wsRef.current.close();
       }
     };
-  }, []);
+  }, [userId]);
 
   const onRefresh = React.useCallback(async () => {
     if (!userId) return;
@@ -115,9 +138,18 @@ const NotificationsScreen = () => {
 
     const ws = new WebSocket(`${API_URL.replace('http://', 'ws://').replace('https://', 'wss://')}/websocket`);
     
+    ws.onopen = () => {
+      console.log('WebSocket connected');
+      // Send initialization message with user ID
+      ws.send(JSON.stringify({
+        type: 'init',
+        userId: currentUserId
+      }));
+    };
+
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      if (data.type === 'notification' && data.userId === currentUserId) {
+      if (data.type === 'notification') {
         // Fetch new notifications when a real-time update is received
         fetchNotifications(currentUserId);
       }
@@ -127,9 +159,12 @@ const NotificationsScreen = () => {
       console.error('WebSocket error:', error);
     };
 
-    ws.onclose = () => {
-      // Attempt to reconnect after a delay
-      setTimeout(() => setupWebSocket(currentUserId), 3000);
+    ws.onclose = (event) => {
+      console.log('WebSocket closed with code:', event.code);
+      // Only attempt to reconnect if the close wasn't intentional
+      if (event.code !== 1000) {
+        setTimeout(() => setupWebSocket(currentUserId), 3000);
+      }
     };
 
     wsRef.current = ws;
@@ -349,13 +384,6 @@ const NotificationsScreen = () => {
         <View className="flex-row justify-between items-center mt-5">
           <Text className="text-2xl font-semibold">Notifications</Text>
         </View>
-        
-        <TouchableOpacity 
-          className="flex-row items-center gap-3 mt-10"
-          onPress={markAllAsRead}
-        >
-          <Text className="text-xs font-medium text-gray-400">Mark all as read</Text>
-        </TouchableOpacity>
 
         {loading ? (
           <View className="mt-5">
@@ -392,6 +420,25 @@ const NotificationsScreen = () => {
             )}
           </View>
         )}
+
+        <TouchableOpacity 
+          className="flex-row items-center gap-3 mt-10"
+          onPress={async () => {
+            try {
+              await markAllAsRead();
+              // Emit an event to update the blue dot in the layout
+              if (wsRef.current?.readyState === WebSocket.OPEN) {
+                wsRef.current.send(JSON.stringify({
+                  type: 'notifications_read'
+                }));
+              }
+            } catch (error) {
+              console.error('Error marking notifications as read:', error);
+            }
+          }}
+        >
+          <Text className="text-xs font-medium text-gray-400">Mark all as read</Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
 

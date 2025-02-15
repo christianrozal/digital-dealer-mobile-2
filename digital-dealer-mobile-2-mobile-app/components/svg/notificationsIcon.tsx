@@ -23,7 +23,13 @@ const NotificationsIcon: React.FC<NotificationsIconProps> = ({
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      {hasUnread && <Circle cx="14" cy="4" r="2" fill="red" />}
+      {hasUnread && <Circle
+          cx="16.978"
+          cy="6.70557"
+          r="3.42432"
+          fill="#3D12FA"
+          stroke="white"
+        />}
     </Svg>
   );
 };
