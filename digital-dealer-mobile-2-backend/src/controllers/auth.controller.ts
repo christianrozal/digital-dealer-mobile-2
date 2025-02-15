@@ -12,13 +12,25 @@ interface AuthenticatedRequest extends Request {
 }
 
 interface UserDealershipAccess {
+  id: number;
   user_id: number;
-  entity_id: number;
-  EntityType: {
+  dealership_id?: number | null;
+  dealership_brand_id?: number | null;
+  dealership_department_id?: number | null;
+  created_at: Date;
+  updated_at: Date;
+  dealership?: {
     id: number;
-    entity_name: string;
-    entity_id: number;
-  };
+    name: string;
+  } | null;
+  dealershipBrand?: {
+    id: number;
+    name: string;
+  } | null;
+  dealershipDepartment?: {
+    id: number;
+    name: string;
+  } | null;
 }
 
 const prisma = new PrismaClient();

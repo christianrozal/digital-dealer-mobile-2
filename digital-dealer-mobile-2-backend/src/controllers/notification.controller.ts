@@ -18,7 +18,9 @@ export const getNotifications = async (req: Request, res: Response) => {
         user_id: userId,
       },
       include: {
-        entity: true,
+        dealership: true,
+        dealershipBrand: true,
+        dealershipDepartment: true,
         user: {
           select: {
             id: true,
@@ -68,10 +70,10 @@ export const markAllAsRead = async (req: Request, res: Response) => {
 
 export const createNotification = async (req: Request, res: Response) => {
   try {
-    const { type, userId, entityId } = req.body;
+    const { type, userId, dealershipId, dealershipBrandId, dealershipDepartmentId } = req.body;
 
-    if (!type || !userId || !entityId) {
-      res.status(400).json({ error: 'Type, user ID, and entity ID are required' });
+    if (!type || !userId) {
+      res.status(400).json({ error: 'Type and user ID are required' });
       return;
     }
 
@@ -79,11 +81,15 @@ export const createNotification = async (req: Request, res: Response) => {
       data: {
         type,
         user_id: userId,
-        entity_id: entityId,
+        dealership_id: dealershipId,
+        dealership_brand_id: dealershipBrandId,
+        dealership_department_id: dealershipDepartmentId,
         read: false,
       },
       include: {
-        entity: true,
+        dealership: true,
+        dealershipBrand: true,
+        dealershipDepartment: true,
         user: {
           select: {
             id: true,

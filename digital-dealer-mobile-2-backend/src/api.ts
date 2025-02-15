@@ -9,6 +9,8 @@ import commentRoutes from './routes/comment.routes';
 import customerLogRoutes from './routes/customer-log.routes';
 import userRoutes from './routes/user.routes';
 import notificationRoutes from './routes/notification.routes';
+import dealershipScanRoutes from './routes/dealership-scan.routes';
+import qrCodeRoutes from './routes/qr-code.routes';
 
 interface AuthenticatedRequest extends Request {
   user?: {
@@ -21,6 +23,12 @@ interface AuthenticatedRequest extends Request {
 const prisma = new PrismaClient();
 const app = express();
 const port = process.env.PORT || 3000;
+
+// Request logging middleware
+app.use((req: Request, res: Response, next: NextFunction) => {
+  console.log(`\nIncoming ${req.method} request to ${req.url} at ${new Date().toISOString()}`);
+  next();
+});
 
 // Configure CORS with specific options
 app.use(cors({
@@ -52,11 +60,13 @@ app.get('/api/health', (req: Request, res: Response) => {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/customer-scans', customerScanRoutes);
-app.use('/api/customer', customerRoutes);
+app.use('/api/customers', customerRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/customer-logs', customerLogRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/dealership-scans', dealershipScanRoutes);
+app.use('/api/qr-codes', qrCodeRoutes);
 
 // Get current user
 app.get('/api/users/me', authMiddleware as any, async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {

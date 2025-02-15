@@ -15,12 +15,22 @@ interface Notification {
   type: string;
   read: boolean;
   user_id: number;
-  entity_id: number;
+  dealership_id?: number;
+  dealership_brand_id?: number;
+  dealership_department_id?: number;
   created_at: Date;
   updated_at: Date;
-  entity: {
-    entity_name: string;
-    entity_id: number;
+  dealership?: {
+    id: number;
+    name: string;
+  };
+  dealershipBrand?: {
+    id: number;
+    name: string;
+  };
+  dealershipDepartment?: {
+    id: number;
+    name: string;
   };
   user: {
     id: number;
@@ -147,7 +157,7 @@ const NotificationsScreen = () => {
   };
 
   const getNotificationMessage = (notification: Notification) => {
-    const entityName = notification.entity.entity_name;
+    const entityName = notification.dealership?.name || notification.dealershipBrand?.name || notification.dealershipDepartment?.name || '';
     
     switch (notification.type) {
       case 'reassigned':
@@ -200,10 +210,10 @@ const NotificationsScreen = () => {
         key={notification.id}
         className={`p-3 ${notification.read ? 'bg-white' : 'bg-color3'} mt-3 rounded-md flex-row gap-3 items-center`}
       >
-        {notification.entity.entity_name ? (
+        {notification.dealership?.name || notification.dealershipBrand?.name || notification.dealershipDepartment?.name ? (
           <View className="w-9 h-9 bg-color1 rounded-full flex items-center justify-center">
             <Text className="text-white font-bold text-xs">
-              {getInitials(notification.entity.entity_name)}
+              {getInitials(notification.dealership?.name || notification.dealershipBrand?.name || notification.dealershipDepartment?.name)}
             </Text>
           </View>
         ) : (

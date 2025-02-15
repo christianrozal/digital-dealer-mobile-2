@@ -1,7 +1,8 @@
-import { Request, Response } from 'express'
+import { Request, Response, RequestHandler } from 'express'
 import { PrismaClient } from '@prisma/client'
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
+import slugify from 'slugify'
 
 const prisma = new PrismaClient()
 
@@ -70,50 +71,141 @@ export const updateCustomer = async (req: Request, res: Response) => {
   }
 }
 
-export const getSignedUploadUrl = async (req: Request, res: Response) => {
+export const getSignedUploadUrl: RequestHandler = async (req, res) => {
   try {
     const { customerId } = req.params
     const { fileType } = req.query
 
     if (!fileType) {
-      return res.status(400).json({ error: 'File type is required' })
+      res.status(400).json({ error: 'File type is required' })
+      return
     }
 
-    // Ensure we have all required AWS configs
     if (!process.env.AWS_S3_BUCKET || !process.env.AWS_REGION) {
       console.error('Missing AWS configuration')
-      return res.status(500).json({ error: 'Server configuration error' })
+      res.status(500).json({ error: 'Server configuration error' })
+      return
     }
 
     const key = `customer-profiles/${customerId}-${Date.now()}`
 
-    // Configure the upload command with minimal required parameters
     const command = new PutObjectCommand({
       Bucket: process.env.AWS_S3_BUCKET,
       Key: key,
       ContentType: fileType as string
     })
 
-    // Generate signed URL with content-type header only
     const signedUrl = await getSignedUrl(s3Client, command, { 
       expiresIn: 3600,
       signableHeaders: new Set(['content-type'])
     })
     
-    // Use path-style URL format
     const imageUrl = `https://s3.${process.env.AWS_REGION}.amazonaws.com/${process.env.AWS_S3_BUCKET}/${key}`
-
-    console.log('Generated signed URL for upload:', {
-      bucket: process.env.AWS_S3_BUCKET,
-      key,
-      contentType: fileType,
-      imageUrl,
-      signedUrl
-    })
 
     res.json({ signedUrl, imageUrl })
   } catch (error) {
     console.error('Error generating signed URL:', error)
     res.status(500).json({ error: 'Failed to generate upload URL' })
   }
-} 
+}
+
+export const createCustomer: RequestHandler = async (req, res) => {
+  const requestId = Date.now();
+  const requestSequence = Math.random().toString(36).substring(7);
+  
+  console.log(`\n=== START REQUEST ${requestSequence} ===`);
+  console.log(`[${requestId}] Request headers:`, JSON.stringify(req.headers, null, 2));
+  console.log(`[${requestId}] Request body:`, JSON.stringify(req.body, null, 2));
+
+  try {
+    const { name, email, phone } = req.body;
+
+    if (!email) {
+      console.log(`[${requestId}] [${requestSequence}] Email is required`);
+      res.status(400).json({ error: 'Email is required' });
+      return;
+    }
+
+    console.log(`[${requestId}] [${requestSequence}] Checking for existing customer with email:`, email);
+    const existingCustomer = await prisma.customer.findFirst({
+      where: { email }
+    });
+
+    if (existingCustomer) {
+      console.log(`[${requestId}] [${requestSequence}] Found existing customer:`, existingCustomer);
+      
+      // Only update fields that were provided in the request
+      const updateData: any = {
+        updated_at: new Date()
+      };
+      
+      if (name) updateData.name = name;
+      if (phone) updateData.phone = phone;
+      
+      // Update the existing customer's information if new data was provided
+      const updatedCustomer = await prisma.customer.update({
+        where: { id: existingCustomer.id },
+        data: updateData
+      });
+      
+      console.log(`[${requestId}] [${requestSequence}] Updated existing customer:`, updatedCustomer);
+      console.log(`=== END REQUEST ${requestSequence} (existing customer updated) ===\n`);
+      res.status(200).json(updatedCustomer);
+      return;
+    }
+
+    console.log(`[${requestId}] [${requestSequence}] No existing customer found, creating new customer`);
+
+    let baseSlug = slugify(name, { lower: true, strict: true });
+    let slug = baseSlug;
+    let counter = 1;
+
+    while (true) {
+      const existingCustomer = await prisma.customer.findFirst({
+        where: { slug }
+      });
+
+      if (!existingCustomer) break;
+      slug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+
+    console.log(`[${requestId}] [${requestSequence}] Creating new customer with slug:`, slug);
+    const customer = await prisma.customer.create({
+      data: {
+        name,
+        email,
+        phone,
+        slug
+      }
+    });
+
+    console.log(`[${requestId}] [${requestSequence}] Successfully created customer:`, customer);
+    console.log(`=== END REQUEST ${requestSequence} (new customer) ===\n`);
+    res.status(201).json(customer);
+  } catch (error) {
+    console.error(`[${requestId}] [${requestSequence}] Error creating customer:`, error);
+    console.log(`=== END REQUEST ${requestSequence} (error) ===\n`);
+    res.status(500).json({ error: 'Failed to create customer' });
+  }
+};
+
+export const getCustomerBySlug: RequestHandler = async (req, res) => {
+  try {
+    const { slug } = req.params;
+
+    const customer = await prisma.customer.findFirst({
+      where: { slug }
+    });
+
+    if (!customer) {
+      res.status(404).json({ error: 'Customer not found' });
+      return;
+    }
+
+    res.json(customer);
+  } catch (error) {
+    console.error('Error fetching customer:', error);
+    res.status(500).json({ error: 'Failed to fetch customer' });
+  }
+}; 

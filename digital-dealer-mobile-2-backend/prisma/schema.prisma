@@ -8,7 +8,7 @@ datasource db {
 }
 
 model Dealership {
-  id                   Int               @id @default(autoincrement())
+  id                   Int                    @id @default(autoincrement())
   name                 String
   slug                 String
   website              String?
@@ -20,13 +20,15 @@ model Dealership {
   phone                String?
   email                String?
   address              String?
-  created_at           DateTime          @default(now())
-  updated_at           DateTime          @updatedAt
+  created_at           DateTime               @default(now())
+  updated_at           DateTime               @updatedAt
   appointments         Appointment[]
   customerScans        CustomerScan[]
   dealershipScans      DealershipScan[]
   qrCodes              QrCode[]
   brands               DealershipBrand[]
+  UserDealershipAccess UserDealershipAccess[]
+  Notification         Notification[]
 
   @@map("dealerships")
 }
@@ -34,7 +36,7 @@ model Dealership {
 model DealershipBrand {
   id                   Int                    @id @default(autoincrement())
   name                 String
-  slug                 String
+  slug                 String                 @unique
   dealership_id        Int
   primary_contact_name String?
   phone                String?
@@ -46,36 +48,30 @@ model DealershipBrand {
   qrCodes              QrCode[]
   dealership           Dealership             @relation(fields: [dealership_id], references: [id], onDelete: Cascade)
   departments          DealershipDepartment[]
+  UserDealershipAccess UserDealershipAccess[]
+  Notification         Notification[]
 
   @@map("dealership_brands")
 }
 
 model DealershipDepartment {
-  id                   Int             @id @default(autoincrement())
+  id                   Int                    @id @default(autoincrement())
   name                 String
-  slug                 String
+  slug                 String                 @unique
   dealership_brand_id  Int
   primary_contact_name String?
   phone                String?
   email                String?
   address              String?
-  created_at           DateTime        @default(now())
-  updated_at           DateTime        @updatedAt
+  created_at           DateTime               @default(now())
+  updated_at           DateTime               @updatedAt
   customerScans        CustomerScan[]
   qrCodes              QrCode[]
-  dealershipBrand      DealershipBrand @relation(fields: [dealership_brand_id], references: [id], onDelete: Cascade)
+  dealershipBrand      DealershipBrand        @relation(fields: [dealership_brand_id], references: [id], onDelete: Cascade)
+  UserDealershipAccess UserDealershipAccess[]
+  Notification         Notification[]
 
   @@map("dealership_departments")
-}
-
-model EntityType {
-  id            Int                    @id @default(autoincrement())
-  entity_name   String
-  entity_id     Int
-  created_at    DateTime               @default(now())
-  updated_at    DateTime               @updatedAt
-  notifications Notification[]
-  userAccess    UserDealershipAccess[]
 }
 
 model Role {
@@ -108,22 +104,27 @@ model User {
 }
 
 model UserDealershipAccess {
-  user_id    Int
-  entity_id  Int
-  created_at DateTime   @default(now())
-  updated_at DateTime   @updatedAt
-  entity     EntityType @relation(fields: [entity_id], references: [id])
-  user       User       @relation(fields: [user_id], references: [id])
+  id                       Int                   @id @default(autoincrement())
+  user_id                  Int
+  dealership_id            Int?
+  dealership_brand_id      Int?
+  dealership_department_id Int?
+  created_at               DateTime              @default(now())
+  updated_at               DateTime              @updatedAt
+  dealership               Dealership?           @relation(fields: [dealership_id], references: [id])
+  dealershipBrand          DealershipBrand?      @relation(fields: [dealership_brand_id], references: [id])
+  dealershipDepartment     DealershipDepartment? @relation(fields: [dealership_department_id], references: [id])
+  user                     User                  @relation(fields: [user_id], references: [id])
 
-  @@id([user_id, entity_id])
+  @@unique([user_id, dealership_id, dealership_brand_id, dealership_department_id])
 }
 
 model Customer {
   id                Int              @id @default(autoincrement())
   name              String
-  email             String?
+  email             String?          @unique
   phone             String?
-  slug              String?
+  slug              String?          @unique
   profile_image_url String?
   created_at        DateTime         @default(now())
   updated_at        DateTime         @updatedAt
@@ -134,30 +135,31 @@ model Customer {
 }
 
 model QrCode {
-  id                       Int                  @id @default(autoincrement())
-  qr_code                  String
-  dealership_id            Int
+  id                       Int                   @id @default(autoincrement())
   dealership_brand_id      Int
-  dealership_department_id Int
-  created_at               DateTime             @default(now())
-  updated_at               DateTime             @updatedAt
+  dealership_department_id Int?
+  created_at               DateTime              @default(now())
+  updated_at               DateTime              @updatedAt
   dealershipScans          DealershipScan[]
-  dealershipBrand          DealershipBrand      @relation(fields: [dealership_brand_id], references: [id])
-  dealershipDepartment     DealershipDepartment @relation(fields: [dealership_department_id], references: [id])
-  dealership               Dealership           @relation(fields: [dealership_id], references: [id])
+  dealershipBrand          DealershipBrand       @relation(fields: [dealership_brand_id], references: [id])
+  dealershipDepartment     DealershipDepartment? @relation(fields: [dealership_department_id], references: [id])
+  Dealership               Dealership?           @relation(fields: [dealershipId], references: [id])
+  dealershipId             Int?
 }
 
 model DealershipScan {
-  id            Int        @id @default(autoincrement())
-  qrcode_id     Int
-  customer_id   Int
-  created_at    DateTime   @default(now())
-  submitted_at  DateTime?
-  updated_at    DateTime   @updatedAt
-  dealership_id Int
-  customer      Customer   @relation(fields: [customer_id], references: [id])
-  dealership    Dealership @relation(fields: [dealership_id], references: [id])
-  qrCode        QrCode     @relation(fields: [qrcode_id], references: [id])
+  id           Int         @id @default(autoincrement())
+  qrcode_id    Int
+  customer_id  Int
+  created_at   DateTime    @default(now())
+  status       String      @default("pending")
+  submitted_at DateTime?
+  updated_at   DateTime    @updatedAt
+  form_data    Json?
+  customer     Customer    @relation(fields: [customer_id], references: [id])
+  qrCode       QrCode      @relation(fields: [qrcode_id], references: [id])
+  Dealership   Dealership? @relation(fields: [dealershipId], references: [id])
+  dealershipId Int?
 }
 
 model CustomerScan {
@@ -202,15 +204,19 @@ model Comment {
 }
 
 model Notification {
-  id         Int        @id @default(autoincrement())
-  type       String
-  read       Boolean    @default(false)
-  user_id    Int
-  entity_id  Int
-  created_at DateTime   @default(now())
-  updated_at DateTime   @updatedAt
-  entity     EntityType @relation(fields: [entity_id], references: [id])
-  user       User       @relation(fields: [user_id], references: [id])
+  id                       Int                   @id @default(autoincrement())
+  type                     String
+  read                     Boolean               @default(false)
+  user_id                  Int
+  dealership_id            Int?
+  dealership_brand_id      Int?
+  dealership_department_id Int?
+  created_at               DateTime              @default(now())
+  updated_at               DateTime              @updatedAt
+  dealership               Dealership?           @relation(fields: [dealership_id], references: [id])
+  dealershipBrand          DealershipBrand?      @relation(fields: [dealership_brand_id], references: [id])
+  dealershipDepartment     DealershipDepartment? @relation(fields: [dealership_department_id], references: [id])
+  user                     User                  @relation(fields: [user_id], references: [id])
 }
 
 model Appointment {
