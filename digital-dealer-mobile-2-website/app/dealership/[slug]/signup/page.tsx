@@ -87,7 +87,7 @@ const SignupPage = () => {
         }
 
         throw new Error('Entity not found');
-      } catch (_error) {
+      } catch {
         setError('Invalid QR code or entity not found');
         setPageLoading(false);
       }

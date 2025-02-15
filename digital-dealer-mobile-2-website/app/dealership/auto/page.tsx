@@ -3,31 +3,44 @@
 import { useRouter } from "next/navigation";
 import React, { useState, useEffect } from "react";
 import { Button, Spinner } from "@heroui/react";
-import Link from "next/link";
 import { API_URL } from '@/constants';
 import AlexiumLogoIcon from "@/app/components/svg/alexiumLogo";
 
+interface DealershipDepartment {
+  slug: string;
+  name: string;
+  dealershipBrand?: {
+    dealership?: {
+      name: string;
+    };
+  };
+}
+
+interface DealershipBrand {
+  slug: string;
+  name: string;
+  dealership?: {
+    name: string;
+  };
+}
+
+interface Customer {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  slug: string;
+  profile_image_url?: string;
+}
+
 const AutoRecognitionPage = () => {
   const router = useRouter();
-  const [customerData, setCustomerData] = useState<{
-    id: number;
-    name: string;
-    email: string;
-    phone: string;
-    slug: string;
-  } | null>(null);
+  const [customerData, setCustomerData] = useState<Customer | null>(null);
   const [firstName, setFirstName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [entityName, setEntityName] = useState<string>('');
   const [entitySlug, setEntitySlug] = useState<string>('');
-
-  const convertToTitleCase = (str: string): string => {
-    if (!str) return "";
-    return str
-      .toLowerCase()
-      .replace(/(^|\s)\w/g, (match) => match.toUpperCase());
-  };
 
   useEffect(() => {
     // Get entity slug from localStorage
@@ -43,9 +56,9 @@ const AutoRecognitionPage = () => {
         if (!entitySlug) return;
         
         // Try department first
-        let response = await fetch(`${API_URL}/api/dealership-departments`);
-        let departments = await response.json();
-        let department = departments.find((d: any) => d.slug === entitySlug);
+        const response = await fetch(`${API_URL}/api/dealership-departments`);
+        const departments = await response.json();
+        const department = departments.find((d: DealershipDepartment) => d.slug === entitySlug);
 
         if (department) {
           setEntityName(department.name);
@@ -53,9 +66,9 @@ const AutoRecognitionPage = () => {
         }
 
         // Try brand if department not found
-        response = await fetch(`${API_URL}/api/dealership-brands`);
-        let brands = await response.json();
-        let brand = brands.find((b: any) => b.slug === entitySlug);
+        const brandResponse = await fetch(`${API_URL}/api/dealership-brands`);
+        const brands = await response.json();
+        const brand = brands.find((b: DealershipBrand) => b.slug === entitySlug);
 
         if (brand) {
           setEntityName(brand.name);
