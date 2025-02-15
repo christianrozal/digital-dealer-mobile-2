@@ -66,8 +66,8 @@ const AutoRecognitionPage = () => {
         }
 
         // Try brand if department not found
-        const brandResponse = await fetch(`${API_URL}/api/dealership-brands`);
-        const brands = await response.json();
+        const response2 = await fetch(`${API_URL}/api/dealership-brands`);
+        const brands = await response2.json();
         const brand = brands.find((b: DealershipBrand) => b.slug === entitySlug);
 
         if (brand) {
