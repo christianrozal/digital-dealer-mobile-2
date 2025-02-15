@@ -6,12 +6,6 @@ import { Input, Checkbox, Button } from "@heroui/react";
 import { API_URL } from '@/constants';
 import AlexiumLogoIcon from '@/app/components/svg/alexiumLogo';
 
-interface EntityDetails {
-  name: string;
-  type: 'brand' | 'department';
-  dealershipName: string;
-}
-
 interface DealershipDepartment {
   slug: string;
   name: string;
@@ -37,7 +31,6 @@ const SignupPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const isSubmitting = useRef(false);
   const [error, setError] = useState<string | null>(null);
-  const [entityDetails, setEntityDetails] = useState<EntityDetails | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -57,10 +50,6 @@ const SignupPage = () => {
 
   const { slug } = params;
   const [processedSlug, setProcessedSlug] = useState<string>('');
-  const formRef = useRef<HTMLFormElement>(null);
-  const submitCount = useRef(0);
-  const lastSubmissionTime = useRef(0);
-  const MIN_SUBMISSION_DELAY = 2000; // 2 seconds
 
   const convertToTitleCase = (str: string): string => {
     if (!str) return "";
@@ -83,32 +72,22 @@ const SignupPage = () => {
         const department = departments.find((d: DealershipDepartment) => d.slug === slug);
 
         if (department) {
-          setEntityDetails({
-            name: department.name,
-            type: 'department',
-            dealershipName: department.dealershipBrand?.dealership?.name || 'Dealership'
-          });
           setPageLoading(false);
           return;
         }
 
         // Try brand if department not found
-        const brandResponse = await fetch(`${API_URL}/api/dealership-brands`);
-        const brands = await response.json();
+        const response2 = await fetch(`${API_URL}/api/dealership-brands`);
+        const brands = await response2.json();
         const brand = brands.find((b: DealershipBrand) => b.slug === slug);
 
         if (brand) {
-          setEntityDetails({
-            name: brand.name,
-            type: 'brand',
-            dealershipName: brand.dealership?.name || 'Dealership'
-          });
           setPageLoading(false);
           return;
         }
 
         throw new Error('Entity not found');
-      } catch (error) {
+      } catch (_error) {
         setError('Invalid QR code or entity not found');
         setPageLoading(false);
       }
@@ -278,7 +257,7 @@ const SignupPage = () => {
           </h2>
           <h3 className="text-base mt-3">Thank you for visiting us today.</h3>
           <p className="text-xs text-color2 mt-3">
-            We're excited to help you find your perfect vehicle and provide
+            We&apos;re excited to help you find your perfect vehicle and provide
             you with personalised service.
           </p>
         </div>
