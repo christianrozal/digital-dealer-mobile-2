@@ -66,63 +66,106 @@ const SignupPage = () => {
 
     const fetchEntityDetails = async () => {
       try {
+        if (!slug) {
+          console.error('Slug is undefined or empty');
+          throw new Error('Invalid slug');
+        }
+        console.log('Starting fetch with slug:', slug);
+
         // Try department first
         console.log('Fetching departments...');
         const response = await fetch(`${API_URL}/api/dealership-departments`);
-        const departmentsResponse = await response.json();
-        console.log('Departments response:', departmentsResponse);
-        
         if (!response.ok) {
-          console.error('Departments fetch failed:', departmentsResponse);
-          throw new Error('Failed to fetch departments');
+          console.error('Departments fetch failed with status:', response.status);
+          throw new Error(`Failed to fetch departments: ${response.status}`);
         }
 
-        // Handle both response formats (direct array or {success, data} structure)
-        const departments = Array.isArray(departmentsResponse) 
-          ? departmentsResponse 
-          : departmentsResponse.data || [];
-          
-        console.log('Processed departments:', departments);
-        console.log('Looking for slug:', slug);
+        let departmentsResponse;
+        try {
+          departmentsResponse = await response.json();
+          console.log('Raw departments response:', JSON.stringify(departmentsResponse));
+        } catch (parseError) {
+          console.error('Failed to parse departments response:', parseError);
+          throw new Error('Invalid departments response');
+        }
 
-        const department = departments.find((d: DealershipDepartment) => {
-          console.log('Checking department:', d);
-          return d.slug === slug;
-        });
+        // Safely extract departments array with type checking
+        let departments = [];
+        if (Array.isArray(departmentsResponse)) {
+          departments = departmentsResponse;
+        } else if (departmentsResponse && typeof departmentsResponse === 'object') {
+          departments = Array.isArray(departmentsResponse.data) ? departmentsResponse.data : [];
+        }
+        console.log('Processed departments array:', JSON.stringify(departments));
 
-        if (department) {
-          console.log('Department found:', department);
-          setPageLoading(false);
-          return;
+        // Safely check each department
+        if (departments.length > 0) {
+          const department = departments.find((d: DealershipDepartment) => {
+            if (!d || typeof d !== 'object') {
+              console.log('Invalid department object:', d);
+              return false;
+            }
+            console.log('Checking department:', JSON.stringify(d));
+            console.log('Department slug:', d.slug);
+            console.log('Comparing with:', slug);
+            return d.slug === slug;
+          });
+
+          if (department) {
+            console.log('Department found:', JSON.stringify(department));
+            setPageLoading(false);
+            return;
+          }
+        } else {
+          console.log('No departments found in response');
         }
 
         // Try brand if department not found
         console.log('Department not found, trying brands...');
         const response2 = await fetch(`${API_URL}/api/dealership-brands`);
-        const brandsResponse = await response2.json();
-        console.log('Brands response:', brandsResponse);
-        
         if (!response2.ok) {
-          console.error('Brands fetch failed:', brandsResponse);
-          throw new Error('Failed to fetch brands');
+          console.error('Brands fetch failed with status:', response2.status);
+          throw new Error(`Failed to fetch brands: ${response2.status}`);
         }
 
-        // Handle both response formats (direct array or {success, data} structure)
-        const brands = Array.isArray(brandsResponse) 
-          ? brandsResponse 
-          : brandsResponse.data || [];
-          
-        console.log('Processed brands:', brands);
+        let brandsResponse;
+        try {
+          brandsResponse = await response2.json();
+          console.log('Raw brands response:', JSON.stringify(brandsResponse));
+        } catch (parseError) {
+          console.error('Failed to parse brands response:', parseError);
+          throw new Error('Invalid brands response');
+        }
 
-        const brand = brands.find((b: DealershipBrand) => {
-          console.log('Checking brand:', b);
-          return b.slug === slug;
-        });
+        // Safely extract brands array with type checking
+        let brands = [];
+        if (Array.isArray(brandsResponse)) {
+          brands = brandsResponse;
+        } else if (brandsResponse && typeof brandsResponse === 'object') {
+          brands = Array.isArray(brandsResponse.data) ? brandsResponse.data : [];
+        }
+        console.log('Processed brands array:', JSON.stringify(brands));
 
-        if (brand) {
-          console.log('Brand found:', brand);
-          setPageLoading(false);
-          return;
+        // Safely check each brand
+        if (brands.length > 0) {
+          const brand = brands.find((b: DealershipBrand) => {
+            if (!b || typeof b !== 'object') {
+              console.log('Invalid brand object:', b);
+              return false;
+            }
+            console.log('Checking brand:', JSON.stringify(b));
+            console.log('Brand slug:', b.slug);
+            console.log('Comparing with:', slug);
+            return b.slug === slug;
+          });
+
+          if (brand) {
+            console.log('Brand found:', JSON.stringify(brand));
+            setPageLoading(false);
+            return;
+          }
+        } else {
+          console.log('No brands found in response');
         }
 
         console.log('No matching department or brand found for slug:', slug);
