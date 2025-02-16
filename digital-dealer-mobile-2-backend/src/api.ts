@@ -35,7 +35,11 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
 // Configure CORS with specific options
 app.use(cors({
-  origin: '*', // Allow all origins for development
+  origin: [
+    'https://digital-dealer-mobile-2-website.vercel.app',
+    'http://localhost:3000',
+    'http://localhost:3001'
+  ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: [
     'Content-Type', 

@@ -9,7 +9,11 @@ const server = createServer(app);
 
 // Set up CORS with WebSocket support
 app.use(cors({
-  origin: '*',
+  origin: [
+    'https://digital-dealer-mobile-2-website.vercel.app',
+    'http://localhost:3000',
+    'http://localhost:3001'
+  ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: [
     'Content-Type', 
