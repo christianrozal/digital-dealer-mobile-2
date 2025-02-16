@@ -3,11 +3,20 @@
 import AlexiumLogo2 from "@/app/components/svg/alexiumLogo2";
 import QRIcon from "@/app/components/svg/qrIcon";
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import React from "react";
+import { useParams, useRouter } from "next/navigation";
+import React, { useState } from "react";
+import { Spinner } from "@heroui/react";
 
 const LandingPage = () => {
   const { slug } = useParams();
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleQRClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    router.push(`/landing/${slug}/qr`);
+  };
 
   return (
     <div className="border max-w-sm h-screen mx-auto p-7 relative">
@@ -52,14 +61,19 @@ const LandingPage = () => {
             Enquire Finance
           </li>
         </Link>
-        
       </ul>
       {/* QR Link */}
-      <Link href={`/landing/${slug}/qr`} className="absolute bottom-10 right-10">
-        <QRIcon width={40} height={40} fill="#3d12fa" stroke="#3d12fa" />
+      <Link 
+        href={`/landing/${slug}/qr`} 
+        onClick={handleQRClick}
+        className="absolute bottom-10 right-10 flex items-center justify-center"
+      >
+        {isLoading ? (
+          <Spinner color="primary" size="lg" />
+        ) : (
+          <QRIcon width={40} height={40} fill="#3d12fa" stroke="#3d12fa" />
+        )}
       </Link>
-
-      
     </div>
   );
 };
