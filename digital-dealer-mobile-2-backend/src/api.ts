@@ -1,4 +1,4 @@
-import express, { Request, Response, NextFunction } from 'express';
+import express, { Request, Response, NextFunction, RequestHandler } from 'express';
 import { PrismaClient } from '@prisma/client';
 import cors from 'cors';
 import authRoutes from './routes/auth.routes';
@@ -33,7 +33,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-// Configure CORS with specific options
+// Configure CORS - must be before any routes
 app.use(cors({
   origin: true, // Allow all origins temporarily for debugging
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -47,9 +47,12 @@ app.use(cors({
     'Sec-WebSocket-Extensions',
     'Sec-WebSocket-Protocol'
   ],
-  credentials: true
+  credentials: true,
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 }));
 
+// Parse JSON bodies
 app.use(express.json());
 
 // Root route - no auth required
@@ -137,17 +140,50 @@ app.get('/api/dealership-brands', async (req: Request, res: Response, next: Next
   }
 });
 
-// Get all dealership departments
-app.get('/api/dealership-departments', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+const getDealershipDepartments: RequestHandler = async (req, res, next) => {
   try {
+    console.log('Fetching dealership departments...');
     const departments = await prisma.dealershipDepartment.findMany({
-      orderBy: { name: 'asc' }
+      include: {
+        dealershipBrand: {
+          include: {
+            dealership: true
+          }
+        }
+      },
+      orderBy: {
+        name: 'asc'
+      }
     });
-    res.json(departments);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+
+    if (!departments || departments.length === 0) {
+      console.log('No departments found');
+      res.status(404).json({ 
+        success: false, 
+        error: 'No departments found' 
+      });
+      return;
+    }
+
+    console.log(`Found ${departments.length} departments`);
+    res.status(200).json({ 
+      success: true, 
+      data: departments 
+    });
+    return;
+
+  } catch (error) {
+    console.error('Error fetching dealership departments:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to fetch dealership departments',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+    return;
   }
-});
+};
+
+app.get('/api/dealership-departments', getDealershipDepartments);
 
 // Get departments by brand ID
 app.get('/api/dealership-brands/:brandId/departments', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
