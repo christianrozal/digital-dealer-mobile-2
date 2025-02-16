@@ -70,14 +70,25 @@ const SignupPage = () => {
         console.log('Fetching departments...');
         const response = await fetch(`${API_URL}/api/dealership-departments`);
         const departmentsResponse = await response.json();
+        console.log('Departments response:', departmentsResponse);
         
         if (!response.ok) {
           console.error('Departments fetch failed:', departmentsResponse);
           throw new Error('Failed to fetch departments');
         }
 
-        const departments = departmentsResponse.data;
-        const department = departments.find((d: DealershipDepartment) => d.slug === slug);
+        // Handle both response formats (direct array or {success, data} structure)
+        const departments = Array.isArray(departmentsResponse) 
+          ? departmentsResponse 
+          : departmentsResponse.data || [];
+          
+        console.log('Processed departments:', departments);
+        console.log('Looking for slug:', slug);
+
+        const department = departments.find((d: DealershipDepartment) => {
+          console.log('Checking department:', d);
+          return d.slug === slug;
+        });
 
         if (department) {
           console.log('Department found:', department);
@@ -89,14 +100,24 @@ const SignupPage = () => {
         console.log('Department not found, trying brands...');
         const response2 = await fetch(`${API_URL}/api/dealership-brands`);
         const brandsResponse = await response2.json();
+        console.log('Brands response:', brandsResponse);
         
         if (!response2.ok) {
           console.error('Brands fetch failed:', brandsResponse);
           throw new Error('Failed to fetch brands');
         }
 
-        const brands = brandsResponse.data;
-        const brand = brands.find((b: DealershipBrand) => b.slug === slug);
+        // Handle both response formats (direct array or {success, data} structure)
+        const brands = Array.isArray(brandsResponse) 
+          ? brandsResponse 
+          : brandsResponse.data || [];
+          
+        console.log('Processed brands:', brands);
+
+        const brand = brands.find((b: DealershipBrand) => {
+          console.log('Checking brand:', b);
+          return b.slug === slug;
+        });
 
         if (brand) {
           console.log('Brand found:', brand);
