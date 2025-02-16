@@ -35,15 +35,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
 // Configure CORS with specific options
 app.use(cors({
-  origin: [
-    'https://digital-dealer-mobile-2-website.vercel.app',
-    'https://digital-dealer-mobile-2-website-git-main-chans-projects.vercel.app',
-    'https://digital-dealer-mobile-2-website-*.vercel.app',
-    'http://localhost:3000',
-    'http://localhost:3001',
-    'http://127.0.0.1:3000',
-    'http://127.0.0.1:3001'
-  ],
+  origin: true, // Allow all origins temporarily for debugging
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: [
     'Content-Type', 
@@ -174,6 +166,15 @@ app.get('/api/dealership-brands/:brandId/departments', async (req: Request, res:
 
 // Set up WebSocket server without path restriction
 const wss = setupWebSocketServer(server);
+
+// Error handling middleware
+app.use((err: any, req: any, res: any, next: any) => {
+  console.error('Error:', err);
+  res.status(500).json({ 
+    error: 'Internal Server Error',
+    message: err.message 
+  });
+});
 
 // Start the server
 server.listen(port, () => {
