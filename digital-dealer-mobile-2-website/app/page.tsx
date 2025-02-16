@@ -1,9 +1,6 @@
 "use client";
 
-import { Button } from "@heroui/react";
-import { useRouter } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
-import Image from "next/image";
 import AlexiumLogo2 from "./components/svg/alexiumLogo2";
 import Link from "next/link";
 
@@ -41,7 +38,7 @@ export default function Home() {
             NEED HELP DURING YOUR VISIT?
           </p>
           <p className="text-sm text-gray-500 mt-4">
-            Simply scan this QR code, and we'll connect you with a Sale Consultant in no time. Let us take care of everything while you focus on finding your dream car.
+            Simply scan this QR code, and we&apos;ll connect you with a Sale Consultant in no time. Let us take care of everything while you focus on finding your dream car.
           </p>
         </div>
       </div>

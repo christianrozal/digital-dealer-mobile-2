@@ -11,12 +11,24 @@ import AlexiumLogo2 from "@/app/components/svg/alexiumLogo2";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
+interface UserData {
+  id: number;
+  name: string;
+  email: string;
+  phone: string | null;
+  profile_image_url: string | null;
+  position?: string;
+  slug: string;
+  dealership_brand_id: number;
+  dealership_department_id: number | null;
+}
+
 const ConsultantSlugPage = () => {
   const router = useRouter();
   const { slug } = useParams();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [userData, setUserData] = useState<any>(null);
+  const [userData, setUserData] = useState<UserData | null>(null);
   const [showConfirmation, setShowConfirmation] = React.useState(false);
 
   useEffect(() => {
@@ -30,7 +42,7 @@ const ConsultantSlugPage = () => {
           throw new Error("Failed to fetch user data");
         }
 
-        const data = await response.json();
+        const data: UserData = await response.json();
         setUserData(data);
       } catch (error) {
         console.error("Error fetching user:", error);
@@ -84,6 +96,8 @@ END:VCARD`;
   };
 
   const handleBookAppointment = () => {
+    if (!userData) return;
+    
     try {
       // Store consultant data in localStorage
       localStorage.setItem('selectedConsultant', JSON.stringify({
