@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Input, Checkbox, Button } from "@heroui/react";
+import { Input, Checkbox, Button, Spinner } from "@heroui/react";
 import { API_URL } from '@/constants';
 import AlexiumLogoIcon from '@/app/components/svg/alexiumLogo';
 
@@ -304,17 +304,37 @@ const SignupPage = () => {
 
   if (pageLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+      <div className="border max-w-sm min-h-screen mx-auto py-12 px-8">
+        <div className="flex flex-col items-center justify-center h-full">
+          <AlexiumLogoIcon size={63} />
+          <div className="text-center">
+            <h1 className="text-xs font-semibold mt-3 text-black">
+              {processedSlug}
+            </h1>
+            <p className="text-color2 text-[8px]">POWERED BY ALEXIUM</p>
+          </div>
+          <div className="mt-10">
+            <Spinner size="lg" color="primary"/>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="bg-red-50 p-4 rounded-lg">
-          <p className="text-red-700">{error}</p>
+      <div className="border max-w-sm min-h-screen mx-auto py-12 px-8">
+        <div className="flex flex-col items-center justify-center">
+          <AlexiumLogoIcon size={63} />
+          <div className="text-center">
+            <h1 className="text-xs font-semibold mt-3 text-black">
+              {processedSlug}
+            </h1>
+            <p className="text-color2 text-[8px]">POWERED BY ALEXIUM</p>
+          </div>
+          <div className="mt-10 bg-red-50 p-4 rounded-lg">
+            <p className="text-red-700">{error}</p>
+          </div>
         </div>
       </div>
     );
@@ -355,6 +375,7 @@ const SignupPage = () => {
             value={formData.name}
             onChange={handleInputChange}
             required
+            isDisabled={submitting}
             classNames={{
               inputWrapper: "bg-color3 rounded-md",
             }}
@@ -367,6 +388,7 @@ const SignupPage = () => {
             value={formData.email}
             onChange={handleInputChange}
             required
+            isDisabled={submitting}
             classNames={{
               inputWrapper: "bg-color3 rounded-md",
             }}
@@ -379,6 +401,7 @@ const SignupPage = () => {
             value={formData.phone}
             onChange={handleInputChange}
             required
+            isDisabled={submitting}
             classNames={{
               inputWrapper: "bg-color3 rounded-md",
             }}
@@ -390,6 +413,7 @@ const SignupPage = () => {
               name="terms"
               isSelected={formData.terms}
               onChange={handleInputChange}
+              isDisabled={submitting}
               classNames={{
                 label: "text-[10px] text-color2",
               }}
@@ -399,10 +423,11 @@ const SignupPage = () => {
           </div>
           
           <Button
-            onClick={handleSubmit}
-            className="bg-color1 w-full mt-10 text-white"
+            onPress={handleSubmit}
+            className="bg-color1 w-full mt-10 text-white rounded-full"
             isDisabled={submitting}
             isLoading={submitting}
+            size="lg"
           >
             {submitting ? "Checking in..." : "Check-In"}
           </Button>
