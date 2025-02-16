@@ -152,6 +152,17 @@ app.get('/api/dealership-brands', async (req: Request, res: Response, next: Next
 const getDealershipDepartments: RequestHandler = async (req, res, next) => {
   try {
     console.log('Fetching dealership departments...');
+    console.log('Database URL:', process.env.DATABASE_URL ? 'Set' : 'Not set');
+    
+    // Test Prisma connection
+    try {
+      await prisma.$connect();
+      console.log('Successfully connected to database');
+    } catch (connError) {
+      console.error('Database connection failed:', connError);
+      throw connError;
+    }
+
     const departments = await prisma.dealershipDepartment.findMany({
       include: {
         dealershipBrand: {
@@ -183,12 +194,21 @@ const getDealershipDepartments: RequestHandler = async (req, res, next) => {
 
   } catch (error) {
     console.error('Error fetching dealership departments:', error);
+    console.error('Error details:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    });
+    
     res.status(500).json({ 
       success: false, 
       error: 'Failed to fetch dealership departments',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
     return;
+  } finally {
+    // Always disconnect to prevent connection pool issues
+    await prisma.$disconnect();
   }
 };
 
