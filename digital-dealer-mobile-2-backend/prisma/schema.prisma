@@ -22,7 +22,6 @@ model Dealership {
   address              String?
   created_at           DateTime               @default(now())
   updated_at           DateTime               @updatedAt
-  appointments         Appointment[]
   customerScans        CustomerScan[]
   dealershipScans      DealershipScan[]
   qrCodes              QrCode[]
@@ -50,6 +49,7 @@ model DealershipBrand {
   departments          DealershipDepartment[]
   UserDealershipAccess UserDealershipAccess[]
   Notification         Notification[]
+  appointments         Appointment[]
 
   @@map("dealership_brands")
 }
@@ -70,6 +70,7 @@ model DealershipDepartment {
   dealershipBrand      DealershipBrand        @relation(fields: [dealership_brand_id], references: [id], onDelete: Cascade)
   UserDealershipAccess UserDealershipAccess[]
   Notification         Notification[]
+  appointments         Appointment[]
 
   @@map("dealership_departments")
 }
@@ -221,15 +222,19 @@ model Notification {
 }
 
 model Appointment {
-  id            Int        @id @default(autoincrement())
-  date          DateTime
-  notes         String?
-  user_id       Int
-  customer_id   Int
-  dealership_id Int
-  created_at    DateTime   @default(now())
-  updated_at    DateTime   @updatedAt
-  customer      Customer   @relation(fields: [customer_id], references: [id])
-  dealership    Dealership @relation(fields: [dealership_id], references: [id])
-  user          User       @relation(fields: [user_id], references: [id])
+  id                       Int                   @id @default(autoincrement())
+  date                     DateTime
+  notes                    String?
+  user_id                  Int
+  customer_id              Int
+  dealership_brand_id      Int
+  dealership_department_id Int?
+  created_at              DateTime              @default(now())
+  updated_at              DateTime              @updatedAt
+  customer                Customer              @relation(fields: [customer_id], references: [id])
+  dealershipBrand         DealershipBrand      @relation(fields: [dealership_brand_id], references: [id])
+  dealershipDepartment    DealershipDepartment? @relation(fields: [dealership_department_id], references: [id])
+  user                    User                  @relation(fields: [user_id], references: [id])
+
+  @@map("appointments")
 }

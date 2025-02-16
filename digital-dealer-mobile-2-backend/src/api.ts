@@ -11,6 +11,7 @@ import userRoutes from './routes/user.routes';
 import notificationRoutes from './routes/notification.routes';
 import dealershipScanRoutes from './routes/dealership-scan.routes';
 import qrCodeRoutes from './routes/qr-code.routes';
+import appointmentRoutes from './routes/appointment.routes';
 import { createServer } from 'http';
 import { setupWebSocketServer } from './websocket';
 
@@ -45,7 +46,7 @@ app.use(cors({
     'http://127.0.0.1:3001',
     'http://172.16.20.0:3000'
   ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: [
     'Content-Type', 
     'Authorization', 
@@ -92,6 +93,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/dealership-scans', dealershipScanRoutes);
 app.use('/api/qr-codes', qrCodeRoutes);
+app.use('/api/appointments', appointmentRoutes);
 
 // Get current user
 app.get('/api/users/me', authMiddleware as any, async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {

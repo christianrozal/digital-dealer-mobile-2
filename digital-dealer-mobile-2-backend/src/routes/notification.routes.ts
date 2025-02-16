@@ -1,16 +1,23 @@
-import express, { RequestHandler } from 'express';
-import { getNotifications, markAllAsRead, createNotification } from '../controllers/notification.controller';
-import { authenticateToken } from '../middleware/auth';
+import { Router } from 'express';
+import { 
+  createNotification, 
+  getNotifications, 
+  markNotificationAsRead,
+  markAllNotificationsAsRead
+} from '../controllers/notification.controller';
 
-const router = express.Router();
+const router = Router();
 
-// Get notifications for a user
-router.get('/', authenticateToken, getNotifications as RequestHandler);
+// Create notification
+router.post('/', createNotification as any);
 
-// Mark all notifications as read
-router.put('/mark-all-read', authenticateToken, markAllAsRead as RequestHandler);
+// Get user's notifications with pagination
+router.get('/', getNotifications as any);
 
-// Create a new notification
-router.post('/', createNotification as RequestHandler);
+// Mark notification as read
+router.patch('/:id/read', markNotificationAsRead as any);
+
+// Mark all notifications as read for a user
+router.patch('/mark-all-read', markAllNotificationsAsRead as any);
 
 export default router; 

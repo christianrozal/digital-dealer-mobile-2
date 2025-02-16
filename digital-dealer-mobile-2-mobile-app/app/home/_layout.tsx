@@ -92,7 +92,9 @@ const HomeLayout = () => {
                                 if (data.type === 'notification') {
                                     console.log('Received notification:', data);
                                     // Check for unread notifications
-                                    checkUnreadNotifications(response.data.id, token);
+                                    if (token) {
+                                        checkUnreadNotifications(response.data.id, token);
+                                    }
                                 }
                                 if (data.type === 'connected') {
                                     console.log('Received welcome message from server');

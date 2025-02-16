@@ -9,6 +9,7 @@ import * as ImagePicker from 'expo-image-picker';
 import ButtonComponent from "@/components/ui/button";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CameraIcon from "@/components/svg/cameraIcon";
+import { Alert } from "react-native";
 
 interface UserData {
     name: string;
@@ -140,7 +141,12 @@ const EditProfileScreen = () => {
                     }
                 }
             );
-            router.back();
+            
+            // Set flag before navigating
+            await AsyncStorage.setItem('profileWasEdited', 'true');
+            
+            // Navigate back to profile screen
+            router.push("/profile");
         } catch (error) {
             console.error('Error updating profile:', error);
         } finally {

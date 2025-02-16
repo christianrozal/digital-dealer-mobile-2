@@ -6,6 +6,11 @@ import relativeTime from "dayjs/plugin/relativeTime";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { API_URL } from '@/constants';
+import NotificationReassignment from "@/components/svg/notification-reassignment";
+import NotificationScan from "@/components/svg/notification-scan";
+import NotificationCheckin from "@/components/svg/notification-checkin";
+import NotificationAppointment from "@/components/svg/notification-appointment";
+import NotificationDefault from "@/components/svg/notification-default";
 
 dayjs.extend(relativeTime);
 
@@ -97,8 +102,8 @@ const NotificationsScreen = () => {
             const token = await AsyncStorage.getItem('userToken');
             if (!token) return;
             
-            await axios.put(`${API_URL}/api/notifications/mark-all-read`, 
-              { userId },
+            await axios.patch(`${API_URL}/api/notifications/mark-all-read`, 
+              { user_id: userId },
               {
                 headers: {
                   'Authorization': `Bearer ${token}`,
@@ -199,8 +204,8 @@ const NotificationsScreen = () => {
       }
 
       console.log('Fetching notifications for userId:', currentUserId);
-      console.log('API URL:', `${API_URL}/api/notifications?userId=${currentUserId}`);
-      const response = await axios.get(`${API_URL}/api/notifications?userId=${currentUserId}`, {
+      console.log('API URL:', `${API_URL}/api/notifications?user_id=${currentUserId}`);
+      const response = await axios.get(`${API_URL}/api/notifications?user_id=${currentUserId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Accept': 'application/json',
@@ -226,8 +231,8 @@ const NotificationsScreen = () => {
         return;
       }
 
-      await axios.put(`${API_URL}/api/notifications/mark-all-read`, 
-        { userId },
+      await axios.patch(`${API_URL}/api/notifications/mark-all-read`, 
+        { user_id: userId },
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -270,9 +275,11 @@ const NotificationsScreen = () => {
         return notification.metadata ? 
           ['Customer ', notification.metadata.customerName, ' checked in at ', notification.metadata.entityName] :
           ['A customer has checked in'];
-      case 'appointment':
-        return ['New appointment scheduled in ', entityName];
-      case 'customer_scan':
+      case 'APPOINTMENT_CREATED':
+        return notification.metadata ? 
+          ['New appointment scheduled with ', notification.metadata.customerName] :
+          ['New appointment scheduled'];
+      case 'CUSTOMER_SCAN':
         return ['New customer scan in ', entityName];
       default:
         return ['Update from ', entityName];
@@ -304,6 +311,21 @@ const NotificationsScreen = () => {
     }
   };
 
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'CUSTOMER_REASSIGNMENT':
+        return <NotificationReassignment size={14} />;
+      case 'CUSTOMER_CHECK_IN':
+        return <NotificationCheckin size={14} />;
+      case 'CUSTOMER_SCAN':
+        return <NotificationScan size={14} />;
+      case 'APPOINTMENT_CREATED':
+        return <NotificationAppointment size={14} />;
+      default:
+        return <NotificationDefault size={14} />;
+    }
+  };
+
   const renderNotification = (notification: Notification) => {
     // Get customer name from metadata for initials
     const customerName = notification.metadata?.customerName;
@@ -313,37 +335,17 @@ const NotificationsScreen = () => {
         key={notification.id}
         className={`p-3 ${notification.read ? 'bg-white' : 'bg-color3'} mt-3 rounded-md flex-row gap-3 items-center`}
       >
-        {notification.type === 'CUSTOMER_REASSIGNMENT' || notification.type === 'CUSTOMER_CHECK_IN' ? (
-          // For customer-related notifications, use customer's initials/image
-          notification.metadata?.customerProfileImage ? (
-            <Image
-              source={{ uri: notification.metadata.customerProfileImage }}
-              style={{ width: 36, height: 36, borderRadius: 18 }}
-            />
-          ) : notification.metadata?.customerName ? (
-            <View className="w-9 h-9 bg-color1 rounded-full flex items-center justify-center">
-              <Text className="text-white font-bold text-xs">
-                {getInitials(notification.metadata.customerName)}
-              </Text>
-            </View>
-          ) : (
-            <View className="w-9 h-9 bg-color1 rounded-full flex items-center justify-center">
-              <Text className="text-white font-bold text-xs">EN</Text>
-            </View>
-          )
+        {notification.metadata?.customerProfileImage ? (
+          <Image
+            source={{ uri: notification.metadata.customerProfileImage }}
+            style={{ width: 36, height: 36, borderRadius: 18 }}
+          />
         ) : (
-          // For other notifications, use dealership initials
-          notification.dealership?.name || notification.dealershipBrand?.name || notification.dealershipDepartment?.name ? (
-            <View className="w-9 h-9 bg-color1 rounded-full flex items-center justify-center">
-              <Text className="text-white font-bold text-xs">
-                {getInitials(notification.dealership?.name || notification.dealershipBrand?.name || notification.dealershipDepartment?.name)}
-              </Text>
-            </View>
-          ) : (
-            <View className="w-9 h-9 bg-color1 rounded-full flex items-center justify-center">
-              <Text className="text-white font-bold text-xs">EN</Text>
-            </View>
-          )
+          <View className="w-9 h-9 bg-color1 rounded-full flex items-center justify-center">
+            <Text className="text-white font-bold text-xs">
+              {getInitials(customerName || (notification.dealership?.name || notification.dealershipBrand?.name || notification.dealershipDepartment?.name))}
+            </Text>
+          </View>
         )}
         
         <View className="flex-1 gap-1">
@@ -353,9 +355,10 @@ const NotificationsScreen = () => {
               return (
                 <>
                   {prefix}
-                  <Text className="font-bold text-color1">{name}</Text>
+                  <Text className="font-bold">{name}</Text>
                   {suffix}
-                  {additionalName && <Text className="font-bold text-color1">{additionalName}</Text>}
+                  {additionalName && <Text className="font-bold">{additionalName}</Text>}
+                  <View className="transform translate-y-1 translate-x-1">{getNotificationIcon(notification.type)}</View>
                 </>
               );
             })()}
@@ -370,7 +373,7 @@ const NotificationsScreen = () => {
 
   return (
     <ScrollView 
-      className="flex-1 bg-white pt-20"
+      className="flex-1 bg-white pt-20 mb-20"
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -420,25 +423,6 @@ const NotificationsScreen = () => {
             )}
           </View>
         )}
-
-        <TouchableOpacity 
-          className="flex-row items-center gap-3 mt-10"
-          onPress={async () => {
-            try {
-              await markAllAsRead();
-              // Emit an event to update the blue dot in the layout
-              if (wsRef.current?.readyState === WebSocket.OPEN) {
-                wsRef.current.send(JSON.stringify({
-                  type: 'notifications_read'
-                }));
-              }
-            } catch (error) {
-              console.error('Error marking notifications as read:', error);
-            }
-          }}
-        >
-          <Text className="text-xs font-medium text-gray-400">Mark all as read</Text>
-        </TouchableOpacity>
       </View>
     </ScrollView>
 

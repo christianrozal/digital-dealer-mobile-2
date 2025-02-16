@@ -332,9 +332,12 @@ const AnalyticsScreen = () => {
     // Calculate number of days between dates
     const daysDiff = dayjs(toDate).diff(dayjs(fromDate), 'day') + 1;
 
-    // Determine the grouping strategy based on range
-    if (daysDiff > 90) {
-      // For ranges > 90 days, group by month
+    // Check if this is "This Year" filter
+    const isThisYear = dayjs(fromDate).isSame(dayjs().startOf('year'), 'day') && 
+                      dayjs(toDate).isSame(dayjs().endOf('day'), 'day');
+
+    // For "This Year" or ranges > 90 days, group by month
+    if (isThisYear || daysDiff > 90) {
       const monthData = new Map();
       
       // Initialize all months in the range
@@ -364,7 +367,7 @@ const AnalyticsScreen = () => {
 
       return Array.from(monthData.values()).map(month => ({
         value: month.count,
-        label: month.start.format('MMM YY'),
+        label: month.start.format('MMM'),
         dataPointText: month.count.toString()
       }));
     } else if (daysDiff >= 15) {

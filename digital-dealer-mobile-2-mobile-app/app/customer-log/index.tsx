@@ -13,6 +13,9 @@ import { API_URL } from "@/constants";
 import { format } from 'date-fns';
 import EditIcon from "@/components/svg/editIcon";
 import DeleteIcon from "@/components/svg/deleteIcon";
+import CalendarModal from "@/components/calendarModal";
+import dayjs from "dayjs";
+import SuccessAnimation from "@/components/successAnimation";
 
 interface CustomerScan {
     id: number;
@@ -291,6 +294,15 @@ const CustomerLogScreen = () => {
     const [isCommentFocused, setIsCommentFocused] = useState(false);
     const [isEditCommentFocused, setIsEditCommentFocused] = useState(false);
     const scrollViewRef = useRef<ScrollView>(null);
+    const [showCalendar, setShowCalendar] = useState(false);
+    const [followUpDate, setFollowUpDate] = useState<dayjs.Dayjs | null>(
+        customerScan?.follow_up_date ? dayjs(customerScan.follow_up_date) : null
+    );
+    const [followUpTime, setFollowUpTime] = useState<string | null>(
+        customerScan?.follow_up_date ? dayjs(customerScan.follow_up_date).format('h:mm A') : null
+    );
+    const [showSuccess, setShowSuccess] = useState(false);
+    const [successMessage, setSuccessMessage] = useState("");
 
     useEffect(() => {
         const loadCustomerData = async () => {
@@ -516,6 +528,14 @@ const CustomerLogScreen = () => {
         return `${firstName[0].toUpperCase()}${firstName[1]?.toUpperCase() || 'U'}`;
     };
 
+    const handleCalendarClose = (date?: dayjs.Dayjs, time?: string) => {
+        if (date && time) {
+            setFollowUpDate(date);
+            setFollowUpTime(time);
+        }
+        setShowCalendar(false);
+    };
+
     const handleUpdate = async () => {
         if (!customerScan) return;
         
@@ -527,13 +547,24 @@ const CustomerLogScreen = () => {
                 return;
             }
 
-            // Update the scan first
+            // Combine date and time for follow up
+            let follow_up_date = null;
+            if (followUpDate && followUpTime) {
+                const [hours, minutes] = followUpTime.match(/(\d+):(\d+)/)?.slice(1) || [];
+                const isPM = followUpTime.includes('PM');
+                let hour = parseInt(hours);
+                if (isPM && hour !== 12) hour += 12;
+                if (!isPM && hour === 12) hour = 0;
+                follow_up_date = followUpDate.hour(hour).minute(parseInt(minutes)).toISOString();
+            }
+
+            // Update the scan
             await axios.put(
                 `${API_URL}/api/customer-scans/scan/${customerScan.id}`,
                 {
                     interest_status: value,
                     interested_in: interestedIn[0] || null,
-                    follow_up_date: null // TODO: Add follow up date handling
+                    follow_up_date
                 },
                 {
                     headers: {
@@ -559,6 +590,10 @@ const CustomerLogScreen = () => {
                 setComment(''); // Clear the comment input
             }
 
+            // Show success animation
+            setSuccessMessage("Customer updated successfully");
+            setShowSuccess(true);
+
             // Switch to thread tab and refresh comments
             setActiveTab('thread');
             setLoadingComments(true);
@@ -566,7 +601,8 @@ const CustomerLogScreen = () => {
             
         } catch (error) {
             console.error('Error updating:', error);
-            Alert.alert('Error', 'Failed to update');
+            setSuccessMessage("Failed to update customer");
+            setShowSuccess(true);
         } finally {
             setLoading(false);
         }
@@ -596,9 +632,14 @@ const CustomerLogScreen = () => {
             setShowOptions(null);
             setShowDeleteConfirm(false);
             setCommentToDelete(null);
+            
+            // Show success animation
+            setSuccessMessage("Comment deleted successfully");
+            setShowSuccess(true);
         } catch (error) {
             console.error('Error deleting comment:', error);
-            Alert.alert('Error', 'Failed to delete comment');
+            setSuccessMessage("Failed to delete comment");
+            setShowSuccess(true);
         } finally {
             setIsDeletingComment(false);
         }
@@ -614,6 +655,13 @@ const CustomerLogScreen = () => {
             className="flex-1"
             keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
         >
+            {showSuccess && (
+                <SuccessAnimation
+                    message={successMessage}
+                    isSuccess={successMessage.includes("successfully")}
+                    onAnimationComplete={() => setShowSuccess(false)}
+                />
+            )}
             <ScrollView 
                 ref={scrollViewRef}
                 className='pt-7 px-7 pb-32'
@@ -817,13 +865,44 @@ const CustomerLogScreen = () => {
                     {/* Follow up select date*/}
                     <View className="mt-5">
                         <Text className="text-[10px] text-gray-500">Follow Up Date</Text>
-                        <TouchableOpacity className="mt-3 rounded-md bg-color3 py-3 px-4">
+                        <TouchableOpacity 
+                            className="mt-3 rounded-md bg-color3 py-3 px-4"
+                            onPress={() => setShowCalendar(true)}
+                        >
                             <View className="flex-row justify-between items-center">
-                                <Text className="text-xs">Select date and time</Text>
+                                <Text className="text-xs">
+                                    {followUpDate && followUpTime 
+                                        ? `${followUpDate.format('MMM D, YYYY')} at ${followUpTime}`
+                                        : "Select date and time"
+                                    }
+                                </Text>
                                 <Calendar2Icon width={16} height={16} />
                             </View>
                         </TouchableOpacity>
                     </View>
+
+                    {/* Calendar Modal */}
+                    <Modal
+                        visible={showCalendar}
+                        transparent={true}
+                        animationType="slide"
+                        onRequestClose={() => setShowCalendar(false)}
+                    >
+                        <View className="flex-1 bg-black/50 justify-end">
+                            <TouchableOpacity
+                                className="absolute inset-0"
+                                activeOpacity={1}
+                                onPress={() => setShowCalendar(false)}
+                            />
+                            <View className="bg-white h-[80%] rounded-t-2xl p-5">
+                                <CalendarModal
+                                    onClose={handleCalendarClose}
+                                    initialDate={followUpDate || undefined}
+                                    selectingFor="from"
+                                />
+                            </View>
+                        </View>
+                    </Modal>
 
                     {/* Comments and Thread Section */}
                     <View className="mt-10">
@@ -902,11 +981,40 @@ const CustomerLogScreen = () => {
                                             <View key={comment.id} className={`${showOptions === comment.id ? 'bg-color3' : 'bg-white'} rounded-md p-4 relative`}>
                                                 <View className="flex-row justify-between items-center mb-2">
                                                     <View className="flex-row items-center gap-2">
-                                                        <View className="bg-color1 rounded-full w-8 h-8 items-center justify-center">
-                                                            <Text className="text-white text-xs font-bold">
-                                                                {comment.user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                                                            </Text>
-                                                        </View>
+                                                        {comment.user.profile_image_url ? (
+                                                            <Image
+                                                                source={{ 
+                                                                    uri: comment.user.profile_image_url,
+                                                                    headers: {
+                                                                        'Cache-Control': 'public',
+                                                                        'Pragma': 'public'
+                                                                    }
+                                                                }}
+                                                                className="w-8 h-8 rounded-full"
+                                                                onError={() => {
+                                                                    // If image fails to load, update the comment to use initials
+                                                                    setComments(prev => 
+                                                                        prev.map(c => 
+                                                                            c.id === comment.id ? 
+                                                                            {
+                                                                                ...c,
+                                                                                user: {
+                                                                                    ...c.user,
+                                                                                    profile_image_url: null
+                                                                                }
+                                                                            } : c
+                                                                        )
+                                                                    );
+                                                                }}
+                                                                defaultSource={require('@/assets/images/favicon.png')}
+                                                            />
+                                                        ) : (
+                                                            <View className="bg-color1 rounded-full w-8 h-8 items-center justify-center">
+                                                                <Text className="text-white text-xs font-bold">
+                                                                    {comment.user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                                                                </Text>
+                                                            </View>
+                                                        )}
                                                         <View>
                                                             <Text className="text-xs font-bold">{comment.user.name}</Text>
                                                             <Text className="text-[10px] text-gray-500">
@@ -1017,9 +1125,14 @@ const CustomerLogScreen = () => {
                                                                         );
                                                                         setEditingCommentId(null);
                                                                         setEditedComment('');
+                                                                        
+                                                                        // Show success animation
+                                                                        setSuccessMessage("Comment updated successfully");
+                                                                        setShowSuccess(true);
                                                                     } catch (error) {
                                                                         console.error('Error updating comment:', error);
-                                                                        Alert.alert('Error', 'Failed to update comment');
+                                                                        setSuccessMessage("Failed to update comment");
+                                                                        setShowSuccess(true);
                                                                     } finally {
                                                                         setIsSavingComment(false);
                                                                     }
@@ -1116,11 +1229,40 @@ const CustomerLogScreen = () => {
                                                         </Text>
                                                     </View>
                                                     <View style={{ flex: 1 }} className="flex-row items-center justify-center gap-2">
-                                                        <View className="bg-indigo-500 rounded-full w-7 h-7 items-center justify-center">
-                                                            <Text className="text-white text-xs font-bold">
-                                                                {entry.user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                                                            </Text>
-                                                        </View>
+                                                        {entry.user.profile_image_url ? (
+                                                            <Image
+                                                                source={{ 
+                                                                    uri: entry.user.profile_image_url,
+                                                                    headers: {
+                                                                        'Cache-Control': 'public',
+                                                                        'Pragma': 'public'
+                                                                    }
+                                                                }}
+                                                                className="w-7 h-7 rounded-full"
+                                                                onError={() => {
+                                                                    // If image fails to load, update the history entry to use initials
+                                                                    setAssignmentHistory(prev => 
+                                                                        prev.map(hist => 
+                                                                            hist.timestamp === entry.timestamp ? 
+                                                                            {
+                                                                                ...hist,
+                                                                                user: {
+                                                                                    ...hist.user,
+                                                                                    profile_image_url: null
+                                                                                }
+                                                                            } : hist
+                                                                        )
+                                                                    );
+                                                                }}
+                                                                defaultSource={require('@/assets/images/favicon.png')}
+                                                            />
+                                                        ) : (
+                                                            <View className="bg-indigo-500 rounded-full w-7 h-7 items-center justify-center">
+                                                                <Text className="text-white text-xs font-bold">
+                                                                    {entry.user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                                                                </Text>
+                                                            </View>
+                                                        )}
                                                         <Text className="text-xs">
                                                             {(() => {
                                                                 const nameParts = entry.user.name.split(' ');

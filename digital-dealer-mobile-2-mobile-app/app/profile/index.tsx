@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, Image } from "react-native";
+import { View, Text, TouchableOpacity, Image, Modal, Dimensions, Clipboard } from "react-native";
 import React, { useEffect, useState, useCallback } from "react";
 import EmailIcon from "@/components/svg/emailIcon";
 import PhoneIcon from "@/components/svg/phoneIcon";
@@ -11,11 +11,22 @@ import { API_URL } from "@/constants";
 import axios from "axios";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ButtonComponent from "@/components/ui/button";
+import { Linking, Share } from "react-native";
+import ShareX from "@/components/svg/share-x";
+import ShareFacebook from "@/components/svg/share-facebook";
+import ShareInstagram from "@/components/svg/share-instagram";
+import ShareWhatsapp from "@/components/svg/share-whatsapp";
+import ShareCopy from "@/components/svg/share-copy";
+import SuccessAnimation from "@/components/successAnimation";
 
 const ProfileScreen = () => {
     const [userData, setUserData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [token, setToken] = useState<string | null>(null);
+    const [showShareModal, setShowShareModal] = useState(false);
+    const [copied, setCopied] = useState(false);
+    const [showSuccess, setShowSuccess] = useState(false);
+    const [successMessage, setSuccessMessage] = useState("");
 
     const loadToken = async () => {
         try {
@@ -46,7 +57,23 @@ const ProfileScreen = () => {
 
     useFocusEffect(
         useCallback(() => {
+            const checkProfileEdit = async () => {
+                try {
+                    const wasEdited = await AsyncStorage.getItem('profileWasEdited');
+                    if (wasEdited === 'true') {
+                        setTimeout(() => {
+                            setSuccessMessage("Profile updated successfully");
+                            setShowSuccess(true);
+                        }, 100);
+                        await AsyncStorage.removeItem('profileWasEdited');
+                    }
+                } catch (error) {
+                    console.error('Error checking profile edit status:', error);
+                }
+            };
+            
             loadToken();
+            checkProfileEdit();
         }, [])
     );
 
@@ -58,6 +85,14 @@ const ProfileScreen = () => {
         const firstInitial = firstName[0]?.toUpperCase() || "";
         const lastInitial = lastName[0]?.toUpperCase() || "";
         return firstInitial + lastInitial || "CU";
+    };
+
+    const shareUrl = `https://digital-dealer-mobile-2-website.vercel.app/consultant/${userData?.slug}`;
+
+    const handleCopy = async () => {
+        await Clipboard.setString(shareUrl);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000); // Reset after 2 seconds
     };
 
     if (loading) {
@@ -108,7 +143,7 @@ const ProfileScreen = () => {
                             </View>
                             <Text className="text-2xl font-semibold mt-3">Loading Data...</Text>
                             <Text className="text-xs text-gray-500">
-                                {userData?.role_id === 1 ? "Sales Consultant" : userData?.role?.name || "Loading..."}
+                                {userData?.role_id === 1 ? "Manager" : userData?.role_id === 2 ? "Sales Consultant" : "No Role"}
                             </Text>
                         </View>
                         <View
@@ -135,7 +170,11 @@ const ProfileScreen = () => {
                     </View>
                 </View>
                 <View className="px-4">
-                    <ButtonComponent label="Share Profile" var2 />
+                    <ButtonComponent 
+                        label="Share Profile" 
+                        var2 
+                        onPress={() => setShowShareModal(true)} 
+                    />
                 </View>
             </View>
         );
@@ -144,6 +183,17 @@ const ProfileScreen = () => {
     return (
         <>
             <View className="pt-7 px-7 pb-7 h-full justify-between gap-5">
+                {showSuccess && (
+                    <View className="absolute inset-x-0 top-0 z-[999] items-center pt-5">
+                        <View className="w-11/12">
+                            <SuccessAnimation
+                                message={successMessage}
+                                isSuccess={successMessage.includes("successfully")}
+                                onAnimationComplete={() => setShowSuccess(false)}
+                            />
+                        </View>
+                    </View>
+                )}
                 <View>
                     {/* Header */}
                     <View className="flex-row w-full justify-between items-center">
@@ -199,7 +249,7 @@ const ProfileScreen = () => {
                                 {userData?.name || "No Name"}
                             </Text>
                             <Text className="text-xs text-gray-500">
-                                {userData?.role_id === 1 ? "Sales Consultant" : userData?.role?.name || "No Role"}
+                                {userData?.role_id === 1 ? "Manager" : userData?.role_id === 2 ? "Sales Consultant" : "No Role"}
                             </Text>
                         </View>
                         <View
@@ -226,9 +276,93 @@ const ProfileScreen = () => {
                     </View>
                 </View>
                 <View className="px-4">
-                    <ButtonComponent label="Share Profile" var2 />
+                    <ButtonComponent 
+                        label="Share Profile" 
+                        var2 
+                        onPress={() => setShowShareModal(true)} 
+                    />
                 </View>
             </View>
+
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={showShareModal}
+                onRequestClose={() => setShowShareModal(false)}
+            >
+                <TouchableOpacity 
+                    className="flex-1 bg-black/50"
+                    activeOpacity={1}
+                    onPress={() => setShowShareModal(false)}
+                >
+                    <View 
+                        className="absolute bottom-0 w-full bg-white rounded-t-2xl"
+                        style={{ height: Dimensions.get('window').height * 0.35 }}
+                    >
+                        <View className="p-6">
+                            <Text className="text-lg font-semibold mb-6">Share this profile</Text>
+                            <View className="flex-row justify-between mb-6">
+                                <TouchableOpacity 
+                                    className="items-center" 
+                                    onPress={() => {
+                                        const url = `https://twitter.com/intent/tweet?text=Check out my profile&url=${encodeURIComponent(shareUrl)}`;
+                                        Linking.openURL(url);
+                                    }}
+                                >
+                                    <ShareX />
+                                    <Text className="text-xs mt-1 text-gray-500">Twitter</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity 
+                                    className="items-center"
+                                    onPress={() => {
+                                        const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+                                        Linking.openURL(url);
+                                    }}
+                                >
+                                    <ShareFacebook />
+                                    <Text className="text-xs mt-1 text-gray-500">Facebook</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity 
+                                    className="items-center"
+                                    onPress={() => {
+                                        const url = `https://www.instagram.com/share?url=${encodeURIComponent(shareUrl)}`;
+                                        Linking.openURL(url);
+                                    }}
+                                >
+                                    <ShareInstagram />
+                                    <Text className="text-xs mt-1 text-gray-500">Instagram</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity 
+                                    className="items-center"
+                                    onPress={() => {
+                                        const url = `whatsapp://send?text=Check out this consultant's profile: ${encodeURIComponent(shareUrl)}`;
+                                        Linking.openURL(url);
+                                    }}
+                                >
+                                    <ShareWhatsapp />
+                                    <Text className="text-xs mt-1 text-gray-500">WhatsApp</Text>
+                                </TouchableOpacity>
+                            </View>
+                            <View className="flex-row items-center border border-gray-200 rounded-lg p-3">
+                                <Text className="flex-1 text-sm text-gray-600" numberOfLines={1}>
+                                    {shareUrl}
+                                </Text>
+                                <TouchableOpacity 
+                                    className="ml-2 flex-row items-center gap-2 px-3 py-1.5 rounded-md"
+                                    onPress={handleCopy}
+                                >
+                                    <ShareCopy />
+                                    {copied && (
+                                        <View className="absolute -top-6 right-0 bg-gray-500 px-4 py-1 rounded-full">
+                                            <Text className="text-white text-xs">Copied!</Text>
+                                        </View> 
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+                </TouchableOpacity>
+            </Modal>
         </>
     );
 };

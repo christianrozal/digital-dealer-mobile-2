@@ -208,4 +208,81 @@ export const getUsersByBrand = async (req: Request, res: Response) => {
         console.error('Error fetching users by brand:', error);
         return res.status(500).json({ message: 'Error fetching users' });
     }
+};
+
+export const getConsultantBySlug = async (req: Request, res: Response) => {
+    try {
+        const { slug } = req.params;
+
+        if (!slug) {
+            return res.status(400).json({ message: 'Slug is required' });
+        }
+
+        const user = await prisma.user.findFirst({
+            where: {
+                slug,
+                role: {
+                    name: "Consultant"
+                }
+            },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+                profile_image_url: true,
+                slug: true,
+                role: {
+                    select: {
+                        name: true
+                    }
+                },
+                dealershipAccess: {
+                    select: {
+                        dealership_brand_id: true,
+                        dealership_department_id: true,
+                        dealershipBrand: {
+                            select: {
+                                name: true,
+                                dealership: {
+                                    select: {
+                                        name: true
+                                    }
+                                }
+                            }
+                        },
+                        dealershipDepartment: {
+                            select: {
+                                name: true
+                            }
+                        }
+                    },
+                    // Get the most recent access record
+                    orderBy: {
+                        created_at: 'desc'
+                    },
+                    take: 1
+                }
+            }
+        });
+
+        if (!user) {
+            return res.status(404).json({ message: 'Consultant not found' });
+        }
+
+        // Restructure the response to include dealership information directly
+        const response = {
+            ...user,
+            dealership_brand_id: user.dealershipAccess[0]?.dealership_brand_id || null,
+            dealership_department_id: user.dealershipAccess[0]?.dealership_department_id || null,
+            dealershipBrand: user.dealershipAccess[0]?.dealershipBrand || null,
+            dealershipDepartment: user.dealershipAccess[0]?.dealershipDepartment || null,
+            dealershipAccess: undefined // Remove the original dealershipAccess array
+        };
+
+        return res.json(response);
+    } catch (error) {
+        console.error('Error fetching consultant:', error);
+        return res.status(500).json({ message: 'Error fetching consultant' });
+    }
 }; 

@@ -14,13 +14,14 @@ const s3Client = new S3Client({
   }
 })
 
-export const updateCustomer = async (req: Request, res: Response) => {
+export const updateCustomer: RequestHandler = async (req, res) => {
   try {
-    const { customerId } = req.params
-    const { name, email, phone, profile_image_url } = req.body
+    const { customerId } = req.params;
+    const { name, email, phone, profile_image_url } = req.body;
 
     if (!customerId) {
-      return res.status(400).json({ error: 'Customer ID is required' });
+      res.status(400).json({ error: 'Customer ID is required' });
+      return;
     }
 
     // Get the current customer to check if we need to delete an old image
@@ -62,52 +63,59 @@ export const updateCustomer = async (req: Request, res: Response) => {
         ...(profile_image_url !== undefined && { profile_image_url }),
         updated_at: new Date()
       }
-    })
+    });
 
-    res.json(updatedCustomer)
+    res.json(updatedCustomer);
   } catch (error) {
-    console.error('Error updating customer:', error)
-    res.status(500).json({ error: 'Failed to update customer' })
+    console.error('Error updating customer:', error);
+    res.status(500).json({ error: 'Failed to update customer' });
   }
-}
+};
 
 export const getSignedUploadUrl: RequestHandler = async (req, res) => {
   try {
-    const { customerId } = req.params
-    const { fileType } = req.query
+    const { fileType } = req.query;
+    const { customerId } = req.params;
 
     if (!fileType) {
-      res.status(400).json({ error: 'File type is required' })
-      return
+      res.status(400).json({ error: 'File type is required' });
+      return;
     }
 
+    // Ensure we have all required AWS configs
     if (!process.env.AWS_S3_BUCKET || !process.env.AWS_REGION) {
-      console.error('Missing AWS configuration')
-      res.status(500).json({ error: 'Server configuration error' })
-      return
+      console.error('Missing AWS configuration');
+      res.status(500).json({ error: 'Server configuration error' });
+      return;
     }
 
-    const key = `customer-profiles/${customerId}-${Date.now()}`
+    // Generate key based on whether this is for a new or existing customer
+    const key = customerId 
+      ? `customer-profiles/${customerId}/${Date.now()}`
+      : `customer-profiles/temp/${Date.now()}`;
 
+    // Configure the upload command
     const command = new PutObjectCommand({
       Bucket: process.env.AWS_S3_BUCKET,
       Key: key,
       ContentType: fileType as string
-    })
+    });
 
+    // Generate signed URL
     const signedUrl = await getSignedUrl(s3Client, command, { 
       expiresIn: 3600,
       signableHeaders: new Set(['content-type'])
-    })
+    });
     
-    const imageUrl = `https://s3.${process.env.AWS_REGION}.amazonaws.com/${process.env.AWS_S3_BUCKET}/${key}`
+    // Use path-style URL format
+    const imageUrl = `https://s3.${process.env.AWS_REGION}.amazonaws.com/${process.env.AWS_S3_BUCKET}/${key}`;
 
-    res.json({ signedUrl, imageUrl })
+    res.json({ signedUrl, imageUrl });
   } catch (error) {
-    console.error('Error generating signed URL:', error)
-    res.status(500).json({ error: 'Failed to generate upload URL' })
+    console.error('Error generating signed URL:', error);
+    res.status(500).json({ error: 'Failed to generate upload URL' });
   }
-}
+};
 
 export const createCustomer: RequestHandler = async (req, res) => {
   const requestId = Date.now();
@@ -153,8 +161,6 @@ export const createCustomer: RequestHandler = async (req, res) => {
       res.status(200).json(updatedCustomer);
       return;
     }
-
-    console.log(`[${requestId}] [${requestSequence}] No existing customer found, creating new customer`);
 
     let baseSlug = slugify(name, { lower: true, strict: true });
     let slug = baseSlug;
@@ -210,12 +216,13 @@ export const getCustomerBySlug: RequestHandler = async (req, res) => {
   }
 };
 
-export const getCustomerById = async (req: Request, res: Response) => {
+export const getCustomerById: RequestHandler = async (req, res) => {
   try {
     const { customerId } = req.params;
 
     if (!customerId) {
-      return res.status(400).json({ error: 'Customer ID is required' });
+      res.status(400).json({ error: 'Customer ID is required' });
+      return;
     }
 
     const customer = await prisma.customer.findUnique({
@@ -234,12 +241,142 @@ export const getCustomerById = async (req: Request, res: Response) => {
     });
 
     if (!customer) {
-      return res.status(404).json({ error: 'Customer not found' });
+      res.status(404).json({ error: 'Customer not found' });
+      return;
     }
 
     res.json(customer);
   } catch (error) {
     console.error('Error fetching customer:', error);
     res.status(500).json({ error: 'Failed to fetch customer' });
+  }
+};
+
+export const createCustomerWithScan: RequestHandler = async (req, res) => {
+  const requestId = Date.now();
+  const requestSequence = Math.random().toString(36).substring(7);
+  
+  console.log(`\n=== START REQUEST ${requestSequence} ===`);
+  console.log(`[${requestId}] Request headers:`, JSON.stringify(req.headers, null, 2));
+  console.log(`[${requestId}] Request body:`, JSON.stringify(req.body, null, 2));
+  console.log(`[${requestId}] Request path:`, req.path);
+
+  try {
+    const { customer, customerScan } = req.body;
+
+    if (!customer.name) {
+      console.log(`[${requestId}] [${requestSequence}] Name is required`);
+      res.status(400).json({ error: 'Name is required' });
+      return;
+    }
+
+    if (!customerScan.user_id || !customerScan.dealership_brand_id) {
+      console.log(`[${requestId}] [${requestSequence}] User ID and dealership brand ID are required`);
+      res.status(400).json({ error: 'User ID and dealership brand ID are required' });
+      return;
+    }
+
+    // Get dealership_id from dealership_brand
+    const dealershipBrand = await prisma.dealershipBrand.findUnique({
+      where: { id: customerScan.dealership_brand_id },
+      select: { dealership_id: true }
+    });
+
+    if (!dealershipBrand) {
+      console.log(`[${requestId}] [${requestSequence}] Dealership brand not found`);
+      res.status(400).json({ error: 'Dealership brand not found' });
+      return;
+    }
+
+    // Create base slug from name
+    let baseSlug = slugify(customer.name, { lower: true, strict: true });
+    let slug = baseSlug;
+    let counter = 1;
+
+    // Ensure unique slug
+    while (true) {
+      const existingCustomer = await prisma.customer.findFirst({
+        where: { slug }
+      });
+
+      if (!existingCustomer) break;
+      slug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+
+    // Create both customer and scan in a transaction
+    const result = await prisma.$transaction(async (prisma) => {
+      // Create the customer
+      const newCustomer = await prisma.customer.create({
+        data: {
+          name: customer.name,
+          email: customer.email || null,
+          phone: customer.phone || null,
+          profile_image_url: customer.profile_image_url || null,
+          slug
+        }
+      });
+
+      // Create the customer scan
+      const newCustomerScan = await prisma.customerScan.create({
+        data: {
+          customer: {
+            connect: {
+              id: newCustomer.id
+            }
+          },
+          user: {
+            connect: {
+              id: customerScan.user_id
+            }
+          },
+          dealership: {
+            connect: {
+              id: dealershipBrand.dealership_id
+            }
+          },
+          dealershipBrand: {
+            connect: {
+              id: customerScan.dealership_brand_id
+            }
+          },
+          dealershipDepartment: customerScan.dealership_department_id ? {
+            connect: {
+              id: customerScan.dealership_department_id
+            }
+          } : undefined,
+          interest_status: customerScan.interest_status,
+          interested_in: customerScan.interested_in,
+          follow_up_date: customerScan.follow_up_date ? new Date(customerScan.follow_up_date) : null
+        }
+      });
+
+      return { customer: newCustomer, scan: newCustomerScan };
+    });
+
+    res.status(201).json(result);
+  } catch (error) {
+    console.error('Error creating customer with scan:', error);
+    res.status(500).json({ error: 'Failed to create customer with scan' });
+  }
+};
+
+export const checkCustomerByEmail: RequestHandler = async (req, res) => {
+  try {
+    const { email } = req.query;
+
+    if (!email || typeof email !== 'string') {
+      res.status(400).json({ message: 'Email is required' });
+      return;
+    }
+
+    const customer = await prisma.customer.findUnique({
+      where: { email },
+    });
+
+    res.json(customer);
+  } catch (error) {
+    console.error('Error checking customer:', error);
+    res.status(500).json({ message: 'Error checking customer' });
   }
 }; 

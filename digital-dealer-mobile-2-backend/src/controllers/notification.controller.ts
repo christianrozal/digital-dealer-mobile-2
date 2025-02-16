@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { handleError } from '../utils/error';
 import { emitNewNotification } from '../websocket';
 
@@ -7,55 +7,64 @@ const prisma = new PrismaClient();
 
 export const getNotifications = async (req: Request, res: Response) => {
   try {
-    const userId = parseInt(req.query.userId as string);
+    const { user_id, limit = '20', offset = '0' } = req.query;
 
-    if (!userId) {
-      res.status(400).json({ error: 'User ID is required' });
-      return;
+    if (!user_id) {
+      return res.status(400).json({ message: 'User ID is required' });
     }
 
     const notifications = await prisma.notification.findMany({
       where: {
-        user_id: userId,
+        user_id: parseInt(user_id as string),
       },
       include: {
-        dealership: true,
-        dealershipBrand: true,
-        dealershipDepartment: true,
         user: {
           select: {
-            id: true,
             name: true,
             email: true,
-            profile_image_url: true,
+          },
+        },
+        dealershipBrand: {
+          select: {
+            name: true,
+            dealership: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+        dealershipDepartment: {
+          select: {
+            name: true,
           },
         },
       },
       orderBy: {
         created_at: 'desc',
       },
-      take: 50,
+      take: parseInt(limit as string),
+      skip: parseInt(offset as string),
     });
 
-    res.json(notifications);
+    return res.json(notifications);
   } catch (error) {
-    handleError(error, res);
+    console.error('Error fetching notifications:', error);
+    return res.status(500).json({ message: 'Error fetching notifications' });
   }
 };
 
-export const markAllAsRead = async (req: Request, res: Response) => {
+export const markNotificationAsRead = async (req: Request, res: Response) => {
   try {
-    const { userId } = req.body;
+    const { id } = req.params;
 
-    if (!userId) {
-      return res.status(400).json({ error: 'User ID is required' });
+    if (!id) {
+      return res.status(400).json({ message: 'Notification ID is required' });
     }
 
-    // Update all unread notifications for the user
-    await prisma.notification.updateMany({
+    const notification = await prisma.notification.update({
       where: {
-        user_id: userId,
-        read: false,
+        id: parseInt(id),
       },
       data: {
         read: true,
@@ -63,62 +72,52 @@ export const markAllAsRead = async (req: Request, res: Response) => {
       },
     });
 
-    // Return updated notifications
-    const updatedNotifications = await prisma.notification.findMany({
-      where: {
-        user_id: userId,
-      },
-      include: {
-        dealership: true,
-        dealershipBrand: true,
-        dealershipDepartment: true,
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            profile_image_url: true,
-          },
-        },
-      },
-      orderBy: {
-        created_at: 'desc',
-      },
-    });
-
-    res.json(updatedNotifications);
+    return res.json(notification);
   } catch (error) {
-    console.error('Error marking notifications as read:', error);
-    handleError(error, res);
+    console.error('Error marking notification as read:', error);
+    return res.status(500).json({ message: 'Error marking notification as read' });
   }
 };
 
 export const createNotification = async (req: Request, res: Response) => {
   try {
-    console.log('Creating notification with data:', req.body);
+    const { type, user_id, metadata, dealership_brand_id, dealership_department_id } = req.body;
 
-    // Validate required fields
-    const { type, userId, metadata } = req.body;
-    if (!type || !userId) {
-      return res.status(400).json({ error: 'Type and userId are required fields' });
+    if (!type || !user_id) {
+      return res.status(400).json({ message: 'Type and user_id are required' });
     }
 
-    // Create the notification with proper field mapping
+    // Create notification
     const notification = await prisma.notification.create({
       data: {
-        type: req.body.type,
-        user_id: req.body.userId,
-        dealership_id: req.body.dealershipId || null,
-        dealership_brand_id: req.body.dealershipBrandId || null,
-        dealership_department_id: req.body.dealershipDepartmentId || null,
-        metadata: req.body.metadata as Prisma.JsonValue || {},
-        read: false
+        type,
+        user_id: parseInt(user_id),
+        dealership_brand_id: dealership_brand_id ? parseInt(dealership_brand_id) : null,
+        dealership_department_id: dealership_department_id ? parseInt(dealership_department_id) : null,
+        metadata,
       },
       include: {
-        dealership: true,
-        dealershipBrand: true,
-        dealershipDepartment: true,
-        user: true,
+        user: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+        dealershipBrand: {
+          select: {
+            name: true,
+            dealership: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+        dealershipDepartment: dealership_department_id ? {
+          select: {
+            name: true,
+          },
+        } : false,
       },
     });
 
@@ -127,9 +126,35 @@ export const createNotification = async (req: Request, res: Response) => {
     emitNewNotification(notification);
 
     console.log('Notification created successfully:', notification);
-    res.status(201).json(notification);
+    return res.status(201).json(notification);
   } catch (error) {
     console.error('Error creating notification:', error);
-    res.status(500).json({ error: 'Failed to create notification', details: error });
+    return res.status(500).json({ message: 'Error creating notification' });
+  }
+};
+
+export const markAllNotificationsAsRead = async (req: Request, res: Response) => {
+  try {
+    const { user_id } = req.body;
+
+    if (!user_id) {
+      return res.status(400).json({ message: 'User ID is required' });
+    }
+
+    await prisma.notification.updateMany({
+      where: {
+        user_id: parseInt(user_id as string),
+        read: false
+      },
+      data: {
+        read: true,
+        updated_at: new Date()
+      }
+    });
+
+    return res.json({ message: 'All notifications marked as read' });
+  } catch (error) {
+    console.error('Error marking all notifications as read:', error);
+    return res.status(500).json({ message: 'Error marking all notifications as read' });
   }
 }; 

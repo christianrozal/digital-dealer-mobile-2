@@ -10,6 +10,7 @@ import ProfileIcon from './svg/profileIcon';
 import BackArrowIcon from './svg/backArrow';
 import ButtonComponent from '@/components/ui/button';
 import QRCode from 'react-native-qrcode-svg';
+import { Linking } from 'react-native';
 
 interface SidepaneProps {
     onClose: () => void;
@@ -17,6 +18,7 @@ interface SidepaneProps {
         name: string;
         profile_image_url: string | null;
         email?: string;
+        slug?: string;
     } | null;
 }
 
@@ -82,7 +84,16 @@ const SidepaneComponent = ({ onClose, userData }: SidepaneProps) => {
                     headers: { Authorization: `Bearer ${token}` }
                 });
 
-                const dealershipOptions = response.data.map((dealership: any) => ({
+                // Filter out duplicates based on ID and name
+                const uniqueDealerships = response.data.reduce((acc: any[], current: any) => {
+                    const x = acc.find(item => item.id === current.id || item.name === current.name);
+                    if (!x) {
+                        return acc.concat([current]);
+                    }
+                    return acc;
+                }, []);
+
+                const dealershipOptions = uniqueDealerships.map((dealership: any) => ({
                     id: dealership.id.toString(),
                     label: dealership.name,
                     departments: dealership.departments
@@ -173,6 +184,9 @@ const SidepaneComponent = ({ onClose, userData }: SidepaneProps) => {
             };
             await AsyncStorage.setItem('selectedDealership', JSON.stringify(selection));
             
+            // Set flag for dealership switch success
+            await AsyncStorage.setItem('dealershipWasSwitched', 'true');
+            
             // Update current states
             setCurrentDealership({
                 id: selectedDealership.id,
@@ -229,6 +243,7 @@ const SidepaneComponent = ({ onClose, userData }: SidepaneProps) => {
 
     return (
         <>
+            {/* Main Sidepane Content */}
             <View className="flex-1 bg-white" style={{ paddingVertical: 20 }}>
                 {/* Header with close button */}
                 <View className="flex-row items-center px-5 pb-8">
@@ -260,16 +275,21 @@ const SidepaneComponent = ({ onClose, userData }: SidepaneProps) => {
                         </View>
 
                         {/* QR Code Section */}
-                        {currentDealership && qrValue && (
+                        {currentDealership && qrValue && userData?.slug && (
                         <View style={{ marginTop: 20 }}>
-                            <View className="bg-color3 rounded-md items-center justify-center w-full" style={{ padding: 20 }}>
+                            <TouchableOpacity 
+                                onPress={() => Linking.openURL(`https://digital-dealer-mobile-2-website.vercel.app/consultant/${userData.slug}`)}
+                                className="bg-color3 rounded-md items-center justify-center w-full" 
+                                style={{ padding: 20 }}
+                            >
                                 <QRCode
-                                    value={"test"}
-                                    size={150}
+                                    value={`https://digital-dealer-mobile-2-website.vercel.app/consultant/${userData.slug}`}
+                                    size={170}
                                     backgroundColor="#F4F8FC"
                                     color="#3D12FA"
+                                    ecl="L"
                                 />
-                            </View>
+                            </TouchableOpacity>
                         </View>
                         )}
 
@@ -343,7 +363,7 @@ const SidepaneComponent = ({ onClose, userData }: SidepaneProps) => {
 
                         <TouchableOpacity 
                             className="items-center py-3 px-5 flex-row gap-2"
-                            onPress={handleLogout}
+                            onPress={() => setShowLogoutConfirm(true)}
                             disabled={isLoggingOut}
                         >
                             <LogoutIcon fill="#ef4444" />
@@ -354,6 +374,54 @@ const SidepaneComponent = ({ onClose, userData }: SidepaneProps) => {
                     </View>
                 </View>
             </View>
+
+            {/* Logout Confirmation Modal - Moved outside main View */}
+            {showLogoutConfirm && (
+                <Modal
+                    animationType="fade"
+                    transparent={true}
+                    visible={true}
+                    onRequestClose={() => setShowLogoutConfirm(false)}
+                    statusBarTranslucent={true}
+                >
+                    <TouchableOpacity 
+                        activeOpacity={1} 
+                        onPress={() => setShowLogoutConfirm(false)}
+                        className="absolute inset-0 flex-1 justify-center items-center"
+                        style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+                    >
+                        <TouchableOpacity 
+                            activeOpacity={1}
+                            onPress={(e) => e.stopPropagation()}
+                            className="bg-white rounded-lg p-6 mx-4 w-[90%] max-w-[300px]"
+                        >
+                            <Text className="text-lg font-semibold text-center mb-4">
+                                Confirm Logout
+                            </Text>
+                            <Text className="text-gray-600 text-center mb-6">
+                                Are you sure you want to logout?
+                            </Text>
+                            <View className="flex-row justify-center gap-3">
+                                <TouchableOpacity
+                                    className="bg-gray-100 px-6 py-2 rounded-md"
+                                    onPress={() => setShowLogoutConfirm(false)}
+                                >
+                                    <Text className="text-gray-600">Cancel</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    className="bg-red-500 px-6 py-2 rounded-md"
+                                    onPress={handleLogout}
+                                    disabled={isLoggingOut}
+                                >
+                                    <Text className="text-white">
+                                        {isLoggingOut ? "Logging out..." : "Logout"}
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        </TouchableOpacity>
+                    </TouchableOpacity>
+                </Modal>
+            )}
         </>
     );
 };

@@ -11,6 +11,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { API_URL } from '@/constants';
 import ButtonComponent from '@/components/ui/button';
+import SuccessAnimation from "@/components/successAnimation";
 
 interface CustomerScan {
   id: number;
@@ -107,6 +108,8 @@ const SelectedCustomerScreen = () => {
   const [loading, setLoading] = useState(true);
   const [customerScan, setCustomerScan] = useState<CustomerScan | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
     const fetchCustomerDetails = async () => {
@@ -114,6 +117,7 @@ const SelectedCustomerScreen = () => {
         const customerId = await AsyncStorage.getItem('selectedCustomerId');
         const scanId = await AsyncStorage.getItem('selectedScanId');
         const token = await AsyncStorage.getItem('userToken');
+        const wasEdited = await AsyncStorage.getItem('customerWasEdited');
 
         if (!customerId || !scanId || !token) {
           throw new Error('Required data not found');
@@ -129,6 +133,14 @@ const SelectedCustomerScreen = () => {
         );
 
         setCustomerScan(response.data);
+
+        // Show success message if customer was edited
+        if (wasEdited === 'true') {
+          setSuccessMessage("Customer profile updated successfully");
+          setShowSuccess(true);
+          // Clear the flag
+          await AsyncStorage.removeItem('customerWasEdited');
+        }
       } catch (err) {
         console.error('Error fetching customer details:', err);
         setError('Failed to load customer details');
@@ -173,6 +185,17 @@ const SelectedCustomerScreen = () => {
 
   return (
     <View className="pt-7 px-7 pb-7 h-full justify-between gap-5">
+      {showSuccess && (
+        <View className="absolute inset-x-0 top-0 z-[999] px-5 pt-5">
+          <View className="bg-white rounded-lg shadow-lg">
+            <SuccessAnimation
+              message={successMessage}
+              isSuccess={successMessage.includes("successfully")}
+              onAnimationComplete={() => setShowSuccess(false)}
+            />
+          </View>
+        </View>
+      )}
       <View>
         {/* Header */}
         <View className="flex-row w-full justify-between items-center">

@@ -157,7 +157,16 @@ const DealershipsScreen = () => {
           return;
         }
 
-        const brandOptions = data.map(brand => ({
+        // Filter out duplicates based on brand ID and name
+        const uniqueBrands = data.reduce((acc: DealershipBrand[], current) => {
+          const x = acc.find(item => item.id === current.id || item.name === current.name);
+          if (!x) {
+            return acc.concat([current]);
+          }
+          return acc;
+        }, []);
+
+        const brandOptions = uniqueBrands.map(brand => ({
           id: brand.id.toString(),
           label: brand.name,
         }));

@@ -270,11 +270,11 @@ const SignupPage = () => {
               userId: latestScan.user_id,
               dealershipId: latestScan.dealership_id,
               dealershipBrandId: latestScan.dealership_brand_id,
-              dealershipDepartmentId: latestScan.dealership_department_id,
+              ...(latestScan.dealership_department_id && { dealershipDepartmentId: latestScan.dealership_department_id }),
               metadata: {
                 customerName: customer.name,
                 customerProfileImage: customer.profile_image_url,
-                entityName: scanData.scan.qrCode.dealershipDepartment?.name || scanData.scan.qrCode.dealershipBrand.name
+                entityName: scanData?.scan?.qrCode?.dealershipDepartment?.name || scanData?.scan?.qrCode?.dealershipBrand?.name || slug
               }
             })
           });

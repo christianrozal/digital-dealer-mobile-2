@@ -12,6 +12,7 @@
     "@heroicons/react": "^2.1.1",
     "@heroui/react": "^2.6.14",
     "@types/qrcode.react": "^1.0.5",
+    "dayjs": "^1.11.13",
     "framer-motion": "^12.4.3",
     "next": "15.1.7",
     "qrcode.react": "^4.2.0",

@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { API_URL } from '@/constants'
 import * as ImagePicker from 'expo-image-picker'
 import CameraIcon from "@/components/svg/cameraIcon";
+import SuccessAnimation from "@/components/successAnimation";
 
 interface Customer {
   id: number
@@ -40,6 +41,8 @@ const EditCustomerScreen = () => {
     phone: '',
     profile_image_url: ''
   })
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   // Get the customer and scan IDs from AsyncStorage on mount
   useEffect(() => {
@@ -102,48 +105,57 @@ const EditCustomerScreen = () => {
 
   // Handle customer update
   const handleUpdateCustomer = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const [customerId, token] = await Promise.all([
+      const [customerId, scanId, token] = await Promise.all([
         AsyncStorage.getItem('selectedCustomerId'),
+        AsyncStorage.getItem('selectedScanId'),
         AsyncStorage.getItem('userToken')
-      ])
+      ]);
 
       if (!customerId || !token) {
-        Alert.alert('Error', 'Missing required data')
-        return
+        Alert.alert('Error', 'Missing required data');
+        return;
       }
 
       // Validate required fields
       if (!formData.name.trim()) {
-        Alert.alert('Error', 'Name is required')
-        return
+        Alert.alert('Error', 'Name is required');
+        return;
       }
 
       // Update customer details through the API
       await axios.patch(
-        `${API_URL}/api/customer/${customerId}`,
+        `${API_URL}/api/customers/${customerId}`,
         {
           name: formData.name.trim(),
           email: formData.email.trim() || null,
           phone: formData.phone.trim() || null,
-          profile_image_url: formData.profile_image_url
+          profile_image_url: formData.profile_image_url || null
         },
         {
           headers: {
-            Authorization: `Bearer ${token}`
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
           }
         }
-      )
+      );
 
-      router.push("/customer-details")
-    } catch (error) {
-      console.error('Error updating customer:', error)
-      Alert.alert('Error', 'Failed to update customer profile')
+      // Set flag to show success message in details screen
+      await AsyncStorage.setItem('customerWasEdited', 'true');
+      
+      // Navigate back to details screen
+      router.push("/customer-details");
+    } catch (error: any) {
+      console.error('Error updating customer:', error);
+      Alert.alert(
+        'Error', 
+        error.response?.data?.error || 'Failed to update customer profile'
+      );
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const getInitials = (name: string) => {
     if (!name) return 'LD'
@@ -200,7 +212,7 @@ const EditCustomerScreen = () => {
       
       // Get signed URL from backend
       const { data: { signedUrl, imageUrl } } = await axios.get(
-        `${API_URL}/api/customer/${customerId}/upload-url?fileType=${contentType}`,
+        `${API_URL}/api/customers/${customerId}/upload-url?fileType=${contentType}`,
         {
           headers: { Authorization: `Bearer ${token}` }
         }
@@ -254,6 +266,13 @@ const EditCustomerScreen = () => {
 
   return (
     <View className="pt-7 px-7 pb-7 h-full justify-between gap-5">
+      {showSuccess && (
+        <SuccessAnimation
+          message={successMessage}
+          isSuccess={successMessage.includes("successfully")}
+          onAnimationComplete={() => setShowSuccess(false)}
+        />
+      )}
       <View>
         {/* Header */}
         <View className="flex-row w-full justify-between items-center">

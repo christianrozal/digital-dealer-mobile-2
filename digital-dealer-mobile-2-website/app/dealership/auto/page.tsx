@@ -59,7 +59,11 @@ const AutoRecognitionPage = () => {
         
         // Try department first
         const response = await fetch(`${API_URL}/api/dealership-departments`);
-        const departments = await response.json();
+        if (!response.ok) {
+          throw new Error('Failed to fetch departments');
+        }
+        const departmentsResponse = await response.json();
+        const departments = Array.isArray(departmentsResponse) ? departmentsResponse : departmentsResponse.data || [];
         const department = departments.find((d: DealershipDepartment) => d.slug === entitySlug);
 
         if (department) {
@@ -69,7 +73,11 @@ const AutoRecognitionPage = () => {
 
         // Try brand if department not found
         const response2 = await fetch(`${API_URL}/api/dealership-brands`);
-        const brands = await response2.json();
+        if (!response2.ok) {
+          throw new Error('Failed to fetch brands');
+        }
+        const brandsResponse = await response2.json();
+        const brands = Array.isArray(brandsResponse) ? brandsResponse : brandsResponse.data || [];
         const brand = brands.find((b: DealershipBrand) => b.slug === entitySlug);
 
         if (brand) {
@@ -190,7 +198,7 @@ const AutoRecognitionPage = () => {
             userId: latestScan.user_id,
             dealershipId: latestScan.dealership_id,
             dealershipBrandId: latestScan.dealership_brand_id,
-            dealershipDepartmentId: latestScan.dealership_department_id,
+            ...(latestScan.dealership_department_id && { dealershipDepartmentId: latestScan.dealership_department_id }),
             metadata: {
               customerName: customerData?.name,
               customerProfileImage: customerData?.profile_image_url,
