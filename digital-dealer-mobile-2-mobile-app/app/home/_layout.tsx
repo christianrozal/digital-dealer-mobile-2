@@ -46,17 +46,30 @@ const HomeLayout = () => {
         const loadUserData = async () => {
             try {
                 const token = await AsyncStorage.getItem('userToken');
-                if (!token) return;
+                if (!token) {
+                    router.replace('/login');
+                    return;
+                }
 
                 const response = await axios.get(`${API_URL}/api/users/me`, {
-                    headers: { Authorization: `Bearer ${token}` }
+                    headers: { 
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
                 });
                 setUserData(response.data);
 
                 // Check for unread notifications
                 const notificationsResponse = await axios.get(
-                    `${API_URL}/api/notifications?userId=${response.data.id}`,
-                    { headers: { Authorization: `Bearer ${token}` } }
+                    `${API_URL}/api/notifications?user_id=${response.data.id}`,
+                    { 
+                        headers: { 
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        } 
+                    }
                 );
                 
                 const hasUnread = notificationsResponse.data.some((notification: any) => !notification.read);

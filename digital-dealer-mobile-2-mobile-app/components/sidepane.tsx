@@ -373,28 +373,11 @@ const SidepaneComponent = ({ onClose, userData }: SidepaneProps) => {
                         </TouchableOpacity>
                     </View>
                 </View>
-            </View>
 
-            {/* Logout Confirmation Modal - Moved outside main View */}
-            {showLogoutConfirm && (
-                <Modal
-                    animationType="fade"
-                    transparent={true}
-                    visible={true}
-                    onRequestClose={() => setShowLogoutConfirm(false)}
-                    statusBarTranslucent={true}
-                >
-                    <TouchableOpacity 
-                        activeOpacity={1} 
-                        onPress={() => setShowLogoutConfirm(false)}
-                        className="absolute inset-0 flex-1 justify-center items-center"
-                        style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
-                    >
-                        <TouchableOpacity 
-                            activeOpacity={1}
-                            onPress={(e) => e.stopPropagation()}
-                            className="bg-white rounded-lg p-6 mx-4 w-[90%] max-w-[300px]"
-                        >
+                {/* Logout Confirmation Modal */}
+                {showLogoutConfirm && (
+                    <View className="absolute inset-0 bg-black/50 justify-center items-center">
+                        <View className="bg-white rounded-lg p-6 mx-10 w-[80%]">
                             <Text className="text-lg font-semibold text-center mb-4">
                                 Confirm Logout
                             </Text>
@@ -418,10 +401,10 @@ const SidepaneComponent = ({ onClose, userData }: SidepaneProps) => {
                                     </Text>
                                 </TouchableOpacity>
                             </View>
-                        </TouchableOpacity>
-                    </TouchableOpacity>
-                </Modal>
-            )}
+                        </View>
+                    </View>
+                )}
+            </View>
         </>
     );
 };
