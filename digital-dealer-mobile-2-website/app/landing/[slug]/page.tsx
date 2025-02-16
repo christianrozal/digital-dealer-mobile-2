@@ -6,16 +6,6 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import React, { useState } from "react";
 import { Spinner } from "@heroui/react";
-import { Metadata } from "next";
-
-export const metadata: Metadata = {
-  title: "Welcome to Your Dealership - Digital Dealer Mobile",
-  description: "Explore your dealership options, from browsing cars to booking test drives. Everything you need in one place.",
-  openGraph: {
-    title: "Welcome to Your Dealership - Digital Dealer Mobile",
-    description: "Explore your dealership options, from browsing cars to booking test drives.",
-  },
-};
 
 const LandingPage = () => {
   const { slug } = useParams();

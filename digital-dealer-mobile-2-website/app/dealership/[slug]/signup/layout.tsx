@@ -1,10 +1,10 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Sign Up - Digital Dealer Mobile",
+  title: "Sign Up - Digital Dealer",
   description: "Register with your dealership to enhance your car buying experience. Quick and easy signup process.",
   openGraph: {
-    title: "Sign Up - Digital Dealer Mobile",
+    title: "Sign Up - Digital Dealer",
     description: "Register with your dealership to enhance your car buying experience",
   },
 };

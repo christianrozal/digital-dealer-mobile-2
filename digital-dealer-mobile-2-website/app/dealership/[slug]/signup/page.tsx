@@ -5,16 +5,6 @@ import { useParams, useRouter } from 'next/navigation';
 import { Input, Checkbox, Button, Spinner } from "@heroui/react";
 import { API_URL } from '@/constants';
 import AlexiumLogoIcon from '@/app/components/svg/alexiumLogo';
-import { Metadata } from "next";
-
-export const metadata: Metadata = {
-  title: "Sign Up - Digital Dealer Mobile",
-  description: "Register with your dealership to enhance your car buying experience. Quick and easy signup process.",
-  openGraph: {
-    title: "Sign Up - Digital Dealer Mobile",
-    description: "Register with your dealership to enhance your car buying experience",
-  },
-};
 
 interface DealershipDepartment {
   slug: string;
