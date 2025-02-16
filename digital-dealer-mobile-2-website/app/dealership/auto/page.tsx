@@ -258,7 +258,7 @@ const AutoRecognitionPage = () => {
   }
 
   return (
-    <div className="border max-w-sm h-screen mx-auto py-12 px-8">
+    <div className="border-color1 max-w-sm h-screen mx-auto py-12 px-8">
       <div className="flex flex-col gap-5 justify-between h-full">
         <div>
           {/* header */}

@@ -302,25 +302,6 @@ const SignupPage = () => {
     }));
   };
 
-  if (pageLoading) {
-    return (
-      <div className="border max-w-sm min-h-screen mx-auto py-12 px-8">
-        <div className="flex flex-col items-center justify-center h-full">
-          <AlexiumLogoIcon size={63} />
-          <div className="text-center">
-            <h1 className="text-xs font-semibold mt-3 text-black">
-              {processedSlug}
-            </h1>
-            <p className="text-color2 text-[8px]">POWERED BY ALEXIUM</p>
-          </div>
-          <div className="mt-10">
-            <Spinner size="lg" color="primary"/>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   if (error) {
     return (
       <div className="border max-w-sm min-h-screen mx-auto py-12 px-8">
@@ -347,14 +328,14 @@ const SignupPage = () => {
         <AlexiumLogoIcon size={63} />
         <div className="text-center">
           <h1 className="text-xs font-semibold mt-3 text-black">
-            {processedSlug}
+            {pageLoading ? "Loading Dealership..." : processedSlug}
           </h1>
           <p className="text-color2 text-[8px]">POWERED BY ALEXIUM</p>
         </div>
       </div>
 
       {/* body */}
-      <div className="mt-16">
+      <div className={pageLoading ? "opacity-50 pointer-events-none mt-16" : "mt-16"}>
         <div>
           <h2 className="text-[25px] font-medium">
             Welcome
@@ -375,7 +356,7 @@ const SignupPage = () => {
             value={formData.name}
             onChange={handleInputChange}
             required
-            isDisabled={submitting}
+            isDisabled={submitting || pageLoading}
             classNames={{
               inputWrapper: "bg-color3 rounded-md",
             }}
@@ -388,7 +369,7 @@ const SignupPage = () => {
             value={formData.email}
             onChange={handleInputChange}
             required
-            isDisabled={submitting}
+            isDisabled={submitting || pageLoading}
             classNames={{
               inputWrapper: "bg-color3 rounded-md",
             }}
@@ -401,7 +382,7 @@ const SignupPage = () => {
             value={formData.phone}
             onChange={handleInputChange}
             required
-            isDisabled={submitting}
+            isDisabled={submitting || pageLoading}
             classNames={{
               inputWrapper: "bg-color3 rounded-md",
             }}
@@ -413,7 +394,7 @@ const SignupPage = () => {
               name="terms"
               isSelected={formData.terms}
               onChange={handleInputChange}
-              isDisabled={submitting}
+              isDisabled={submitting || pageLoading}
               classNames={{
                 label: "text-[10px] text-color2",
               }}
@@ -425,7 +406,7 @@ const SignupPage = () => {
           <Button
             onPress={handleSubmit}
             className="bg-color1 w-full mt-10 text-white rounded-full"
-            isDisabled={submitting}
+            isDisabled={submitting || pageLoading}
             isLoading={submitting}
             size="lg"
           >
