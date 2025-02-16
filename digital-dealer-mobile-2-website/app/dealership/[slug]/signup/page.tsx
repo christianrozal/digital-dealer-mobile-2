@@ -67,27 +67,47 @@ const SignupPage = () => {
     const fetchEntityDetails = async () => {
       try {
         // Try department first
+        console.log('Fetching departments...');
         const response = await fetch(`${API_URL}/api/dealership-departments`);
-        const departments = await response.json();
+        const departmentsResponse = await response.json();
+        
+        if (!response.ok) {
+          console.error('Departments fetch failed:', departmentsResponse);
+          throw new Error('Failed to fetch departments');
+        }
+
+        const departments = departmentsResponse.data;
         const department = departments.find((d: DealershipDepartment) => d.slug === slug);
 
         if (department) {
+          console.log('Department found:', department);
           setPageLoading(false);
           return;
         }
 
         // Try brand if department not found
+        console.log('Department not found, trying brands...');
         const response2 = await fetch(`${API_URL}/api/dealership-brands`);
-        const brands = await response2.json();
+        const brandsResponse = await response2.json();
+        
+        if (!response2.ok) {
+          console.error('Brands fetch failed:', brandsResponse);
+          throw new Error('Failed to fetch brands');
+        }
+
+        const brands = brandsResponse.data;
         const brand = brands.find((b: DealershipBrand) => b.slug === slug);
 
         if (brand) {
+          console.log('Brand found:', brand);
           setPageLoading(false);
           return;
         }
 
+        console.log('No matching department or brand found for slug:', slug);
         throw new Error('Entity not found');
-      } catch {
+      } catch (error) {
+        console.error('Error in fetchEntityDetails:', error);
         setError('Invalid QR code or entity not found');
         setPageLoading(false);
       }
