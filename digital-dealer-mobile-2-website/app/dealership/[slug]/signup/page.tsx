@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Input, Checkbox, Button, Spinner } from "@heroui/react";
+import { Input, Checkbox, Button } from "@heroui/react";
 import { API_URL } from '@/constants';
 import AlexiumLogoIcon from '@/app/components/svg/alexiumLogo';
 
