@@ -126,9 +126,15 @@ const AddCustomerScreen = () => {
       const data = await response.json();
       console.log('Customer created successfully:', data);
 
-      // Store success flag in AsyncStorage for showing animation
-      await AsyncStorage.setItem('customerAddSuccess', 'true');
-      router.back();
+      // Store the customer ID and scan ID in AsyncStorage
+      await Promise.all([
+        AsyncStorage.setItem('selectedCustomerId', data.customer.id.toString()),
+        AsyncStorage.setItem('selectedScanId', data.customerScan.id.toString()),
+        AsyncStorage.setItem('customerAddSuccess', 'true')
+      ]);
+
+      // Navigate back to show customer details
+      router.push('/customer-details');
 
     } catch (error) {
       console.error('Error creating customer:', error);
