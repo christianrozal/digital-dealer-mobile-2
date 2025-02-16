@@ -17,7 +17,16 @@ const server = createServer(app);
 
 // Set up CORS with WebSocket support
 app.use(cors({
-  origin: true, // Allow all origins temporarily for debugging
+  origin: [
+    'https://digital-dealer-mobile-2-website.vercel.app',
+    'https://digital-dealer-mobile-2-website-git-main-chans-projects.vercel.app',
+    'https://digital-dealer-mobile-2-website-*.vercel.app',
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:3001',
+    'http://172.16.20.0:3000'
+  ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: [
     'Content-Type', 
@@ -29,7 +38,9 @@ app.use(cors({
     'Sec-WebSocket-Extensions',
     'Sec-WebSocket-Protocol'
   ],
-  credentials: true
+  credentials: true,
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 }));
 
 app.use(express.json());
