@@ -1,24 +1,26 @@
 import { useState, useEffect } from "react";
 import { Button, Text, TouchableOpacity, View } from "react-native";
-import { CameraView, Camera, BarcodeScanningResult } from "expo-camera";
+import { CameraView, Camera, useCameraPermissions, BarcodeScanningResult } from "expo-camera";
 import { router } from "expo-router";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImagePicker from 'expo-image-picker';
 import CloseIcon from "@/components/svg/closeIcon";
 import UploadIcon from "@/components/svg/uploadIcon";
 import { API_URL } from "@/constants";
 
 const QrScannerScreen = () => {
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [permission, requestPermission] = useCameraPermissions();
   const [isScanning, setIsScanning] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const getCameraPermissions = async () => {
-      const { status } = await Camera.requestCameraPermissionsAsync();
-      setHasPermission(status === "granted");
+      if (!permission?.granted) {
+        await requestPermission();
+      }
     };
     getCameraPermissions();
-  }, []);
+  }, [permission, requestPermission]);
 
   const handleBarCodeScanned = async (result: BarcodeScanningResult) => {
     try {
@@ -55,6 +57,16 @@ const QrScannerScreen = () => {
       const followUpDate = new Date();
       followUpDate.setDate(followUpDate.getDate() + 1);
 
+      const scanPayload = {
+        customer_id: parseInt(customerId),
+        user_id: user.id,
+        dealership_brand_id: parseInt(dealership.brand.id),
+        dealership_department_id: dealership.department ? parseInt(dealership.department.id) : null,
+        interest_status: 'Hot',
+        interested_in: 'Buying',
+        follow_up_date: followUpDate.toISOString()
+      };
+
       // Create customer scan
       const response = await fetch(`${API_URL}/api/customer-scans`, {
         method: 'POST',
@@ -63,15 +75,7 @@ const QrScannerScreen = () => {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: JSON.stringify({
-          customer_id: parseInt(customerId),
-          user_id: user.id,
-          dealership_brand_id: parseInt(dealership.brand.id),
-          dealership_department_id: dealership.department ? parseInt(dealership.department.id) : null,
-          interest_status: 'Hot',
-          interested_in: 'Buying',
-          follow_up_date: followUpDate.toISOString()
-        })
+        body: JSON.stringify(scanPayload)
       });
 
       if (!response.ok) {
@@ -90,13 +94,45 @@ const QrScannerScreen = () => {
       router.push('/customer-assignment');
 
     } catch (error) {
-      console.error('Error handling QR scan:', error);
       setError('Failed to process QR code');
       setIsScanning(true);
     }
   };
 
-  if (hasPermission === null) {
+  const handleUploadQR = async () => {
+    try {
+      // Request permission to access media library
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        setError('Permission to access media library is required');
+        return;
+      }
+
+      // Launch image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 1,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const imageUri = result.assets[0].uri;
+        
+        // Scan the image for QR codes using Camera's scanFromURLAsync
+        const scannedCodes = await Camera.scanFromURLAsync(imageUri);
+        
+        if (scannedCodes && scannedCodes.length > 0) {
+          await handleBarCodeScanned(scannedCodes[0]);
+        } else {
+          setError('No QR code found in the image');
+        }
+      }
+    } catch (error) {
+      setError('Failed to process QR code from image');
+    }
+  };
+
+  if (!permission) {
     return (
       <View className="flex-1 justify-center items-center">
         <Text>Requesting camera permission...</Text>
@@ -104,16 +140,13 @@ const QrScannerScreen = () => {
     );
   }
 
-  if (hasPermission === false) {
+  if (!permission.granted) {
     return (
       <View className="flex-1 justify-center items-center">
         <Text className="mb-4">Camera access is required</Text>
         <Button
           title="Grant Permission"
-          onPress={async () => {
-            const { status } = await Camera.requestCameraPermissionsAsync();
-            setHasPermission(status === "granted");
-          }}
+          onPress={requestPermission}
         />
       </View>
     );
@@ -123,10 +156,7 @@ const QrScannerScreen = () => {
     <View className="bg-color1 h-screen relative">
       <CameraView
         facing="back"
-        barcodeScannerSettings={{
-          barcodeTypes: ["qr", "pdf417"],
-        }}
-        onBarcodeScanned={handleBarCodeScanned}
+        onBarcodeScanned={isScanning ? handleBarCodeScanned : undefined}
         style={{ height: '100%' }}
       >
         <TouchableOpacity
@@ -160,6 +190,7 @@ const QrScannerScreen = () => {
           </View>
         </View>
         <TouchableOpacity 
+          onPress={handleUploadQR}
           className="absolute bottom-16 left-1/2 -translate-x-1/2 z-10"
         >
           <View className="items-center justify-center">

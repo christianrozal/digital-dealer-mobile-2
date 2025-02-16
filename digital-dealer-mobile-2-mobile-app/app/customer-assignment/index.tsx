@@ -246,14 +246,13 @@ const CustomerAssignmentScreen = () => {
           },
           body: JSON.stringify({
             type: 'CUSTOMER_REASSIGNMENT',
-            userId: previousScan.user_id,
-            dealershipId: parseInt(dealership.id),
-            dealershipBrandId: parseInt(dealership.brand.id),
-            dealershipDepartmentId: dealership.department ? parseInt(dealership.department.id) : null,
+            user_id: previousScan.user_id,
+            dealership_brand_id: dealership.brand.id,
+            dealership_department_id: dealership.department ? dealership.department.id : null,
             metadata: {
               customerName: customer?.name || 'Unknown Customer',
               newUserName: selectedUser.name,
-              customerProfileImage: customer?.profile_image_url || undefined
+              customerProfileImage: customer?.profile_image_url
             }
           })
         });
