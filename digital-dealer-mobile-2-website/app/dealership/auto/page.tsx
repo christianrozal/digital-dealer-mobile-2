@@ -176,7 +176,6 @@ const AutoRecognitionPage = () => {
       console.log('Scan created successfully:', JSON.stringify(scanData, null, 2));
 
       // Get the QR code details to find the latest user who scanned this customer
-      console.log('Fetching latest scans for customer:', customerData?.id);
       const latestScanResponse = await fetch(`${API_URL}/api/customer-scans/logs/${customerData?.id}`, {
         method: 'GET',
         headers: {
@@ -193,26 +192,22 @@ const AutoRecognitionPage = () => {
           console.log('Latest scan found:', latestScan);
           
           // Create notification for the consultant
-          const notificationData = {
-            type: 'CUSTOMER_CHECK_IN',
-            userId: latestScan.user_id,
-            dealershipId: latestScan.dealership_id,
-            dealershipBrandId: latestScan.dealership_brand_id,
-            ...(latestScan.dealership_department_id && { dealershipDepartmentId: latestScan.dealership_department_id }),
-            metadata: {
-              customerName: customerData?.name,
-              customerProfileImage: customerData?.profile_image_url,
-              entityName: entityName
-            }
-          };
-          
-          console.log('Creating notification with data:', notificationData);
           const notificationResponse = await fetch(`${API_URL}/api/notifications`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify(notificationData)
+            body: JSON.stringify({
+              type: 'CUSTOMER_CHECK_IN',
+              user_id: latestScan.user_id,
+              dealership_brand_id: latestScan.dealership_brand_id,
+              dealership_department_id: latestScan.dealership_department_id || null,
+              metadata: {
+                customerName: customerData?.name,
+                customerProfileImage: customerData?.profile_image_url,
+                entityName: entityName
+              }
+            })
           });
 
           if (!notificationResponse.ok) {
