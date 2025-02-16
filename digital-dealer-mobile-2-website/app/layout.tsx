@@ -20,30 +20,18 @@ export const metadata: Metadata = {
   authors: [{ name: "Alexium" }],
   viewport: "width=device-width, initial-scale=1, maximum-scale=1",
   themeColor: "#3d12fa",
-  manifest: "/manifest.json",
-  icons: {
-    icon: "/favicon.ico",
-    apple: "/apple-touch-icon.png",
-  },
   openGraph: {
     type: "website",
     locale: "en_US",
     url: "https://digital-dealer-mobile.com",
     title: "Digital Dealer",
     description: "Streamline your dealership experience with Digital Dealer",
-    siteName: "Digital Dealer",
-    images: [{
-      url: "/og-image.png",
-      width: 1200,
-      height: 630,
-      alt: "Digital Dealer"
-    }],
+    siteName: "Digital Dealer"
   },
   twitter: {
     card: "summary_large_image",
     title: "Digital Dealer",
-    description: "Streamline your dealership experience with Digital Dealer",
-    images: ["/twitter-image.png"],
+    description: "Streamline your dealership experience with Digital Dealer"
   },
   applicationName: "Digital Dealer",
   appleWebApp: {
