@@ -5,6 +5,16 @@ import React, { useState, useEffect } from "react";
 import { Button, Spinner } from "@heroui/react";
 import { API_URL } from '@/constants';
 import AlexiumLogoIcon from "@/app/components/svg/alexiumLogo";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Welcome Back - Digital Dealer Mobile",
+  description: "Welcome back to your dealership. Quick and secure auto-recognition for returning customers.",
+  openGraph: {
+    title: "Welcome Back - Digital Dealer Mobile",
+    description: "Welcome back to your dealership. Quick and secure auto-recognition for returning customers.",
+  },
+};
 
 interface DealershipDepartment {
   slug: string;

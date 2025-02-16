@@ -6,6 +6,16 @@ import React, { useEffect, useState } from "react";
 import AlexiumLogo2 from "@/app/components/svg/alexiumLogo2";
 import BackArrowIcon from "@/app/components/svg/backArrow";
 import { API_URL } from "@/constants";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "QR Code - Digital Dealer Mobile",
+  description: "Scan this QR code to connect with your dealership representative and enhance your car buying experience.",
+  openGraph: {
+    title: "QR Code - Digital Dealer Mobile",
+    description: "Scan this QR code to connect with your dealership representative.",
+  },
+};
 
 const QRPage = () => {
   const { slug } = useParams();
