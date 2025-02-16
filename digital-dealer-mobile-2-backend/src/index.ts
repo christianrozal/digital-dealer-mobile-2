@@ -2,7 +2,15 @@ import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
 import { setupWebSocketServer } from './websocket';
-import routes from './routes';
+import authRoutes from './routes/auth.routes';
+import customerScanRoutes from './routes/customer-scan.routes';
+import customerRoutes from './routes/customer.routes';
+import commentRoutes from './routes/comment.routes';
+import customerLogRoutes from './routes/customer-log.routes';
+import userRoutes from './routes/user.routes';
+import notificationRoutes from './routes/notification.routes';
+import dealershipScanRoutes from './routes/dealership-scan.routes';
+import qrCodeRoutes from './routes/qr-code.routes';
 
 const app = express();
 const server = createServer(app);
@@ -11,8 +19,12 @@ const server = createServer(app);
 app.use(cors({
   origin: [
     'https://digital-dealer-mobile-2-website.vercel.app',
+    'https://digital-dealer-mobile-2-website-git-main-chans-projects.vercel.app',
+    'https://digital-dealer-mobile-2-website-*.vercel.app',
     'http://localhost:3000',
-    'http://localhost:3001'
+    'http://localhost:3001',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:3001'
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: [
@@ -29,7 +41,17 @@ app.use(cors({
 }));
 
 app.use(express.json());
-app.use('/api', routes);
+
+// Mount routes
+app.use('/api/auth', authRoutes);
+app.use('/api/customer-scans', customerScanRoutes);
+app.use('/api/customers', customerRoutes);
+app.use('/api/comments', commentRoutes);
+app.use('/api/customer-logs', customerLogRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/dealership-scans', dealershipScanRoutes);
+app.use('/api/qr-codes', qrCodeRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
